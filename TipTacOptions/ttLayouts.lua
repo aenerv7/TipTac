@@ -94,6 +94,9 @@ local layout_presets = {
 		classification_worldboss = "%s|r (Boss)",
 		classification_rare = "%s|r (Rare)",
 		classification_rareelite = "+%s|r (Rare)",
+		classification_dc = "<DC>",
+		classification_afk = "<AFK>",
+		classification_dnd = "<DND>",
 
 		hideDefaultBar = true,
 		healthBar = true,
@@ -137,6 +140,9 @@ local layout_presets = {
 		classification_worldboss = "%s|r (Boss)",
 		classification_rare = "%s|r (Rare)",
 		classification_rareelite = "+%s|r (Rare)",
+		classification_dc = "<DC>",
+		classification_afk = "<AFK>",
+		classification_dnd = "<DND>",
 
 		hideDefaultBar = false,
 		healthBar = false,
@@ -168,6 +174,9 @@ local layout_presets = {
 		classification_worldboss = "Level %s|cffff0000 Boss",
 		classification_rare = "Level %s|cffff66ff Rare",
 		classification_rareelite = "Level %s|cffffaaff Rare Elite",
+		classification_dc = "<DC>",
+		classification_afk = "<AFK>",
+		classification_dnd = "<DND>",
 
 		hideDefaultBar = false,
 		healthBar = false,
@@ -225,6 +234,9 @@ local layout_presets = {
 		classification_worldboss = "|rLevel %s (Boss)",
 		classification_rare = "|rLevel %s (Rare)",
 		classification_rareelite = "|rLevel %s (Rare Elite)",
+		classification_dc = "<DC>",
+		classification_afk = "<AFK>",
+		classification_dnd = "<DND>",
 
 		overrideFade = false,
 		hideWorldTips = false,

@@ -159,6 +159,9 @@ local TT_DefaultConfig = {
 	classification_worldboss = "%s|r (Boss)",
 	classification_rare = "%s|r (Rare)",
 	classification_rareelite = "+%s|r (Rare)",
+	classification_dc = "<DC>",
+	classification_afk = "<AFK>",
+	classification_dnd = "<DND>",
 	
 	-- fading
 	overrideFade = true,

@@ -414,6 +414,9 @@ local options = {
 			{ type = "Text", var = "classification_worldboss", label = "Boss" },
 			{ type = "Text", var = "classification_rare", label = "Rare" },
 			{ type = "Text", var = "classification_rareelite", label = "Rare Elite" },
+			{ type = "Text", var = "classification_dc", label = "Disconnected" },
+			{ type = "Text", var = "classification_afk", label = "Aawy From Keyboard" },
+			{ type = "Text", var = "classification_dnd", label = "Do Not Disturb" },
 		}
 	},
 	-- Fading
