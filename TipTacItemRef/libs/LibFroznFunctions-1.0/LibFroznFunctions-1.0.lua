@@ -9,7 +9,7 @@
 
 -- create new library
 local LIB_NAME = "LibFroznFunctions-1.0";
-local LIB_MINOR = 32; -- bump on changes
+local LIB_MINOR = 36; -- bump on changes
 
 if (not LibStub) then
 	error(LIB_NAME .. " requires LibStub.");
@@ -117,7 +117,7 @@ LFF_GEAR_SCORE_ALGORITHM = {
 --         .realGetSpellLinkAvailable                                  = true/false if the real GetSpellLink() is available (since bc 2.3.0). in classic era this function only returns the spell name instead of a spell link.
 --         .relatedExpansionForItemAvailable                           = true/false if C_Item.GetItemInfo() return the related expansion for an item (parameter expansionID) (since Legion 7.1.0)
 --         .defaultGearScoreAlgorithm                                  = default GearScore algorithm
---         .optionsSliderTemplate                                      = options slider template ("OptionsSliderTemplate", since df 10.0.0 and catac 4.4.0 "UISliderTemplateWithLabels")
+--         .optionsSliderTemplate                                      = options slider template ("OptionsSliderTemplate". since df 10.0.0, catac 4.4.0 and 1.15.4 "UISliderTemplateWithLabels")
 --         .skyriding                                                  = true/false if skyriding is available (since df 10.0.2)
 --         .challengeMode                                              = true/false if challenge mode is available (since Legion 7.0.3)
 LibFroznFunctions.hasWoWFlavor = {
@@ -163,7 +163,7 @@ if (LibFroznFunctions.isWoWFlavor.ClassicEra) or (LibFroznFunctions.isWoWFlavor.
 	LibFroznFunctions.hasWoWFlavor.barMarginAdjustment = -2;
 	LibFroznFunctions.hasWoWFlavor.relatedExpansionForItemAvailable = false;
 end
-if (LibFroznFunctions.isWoWFlavor.ClassicEra) or (LibFroznFunctions.isWoWFlavor.BCC) or (LibFroznFunctions.isWoWFlavor.WotLKC) or (LibFroznFunctions.isWoWFlavor.SL) then
+if (LibFroznFunctions.isWoWFlavor.BCC) or (LibFroznFunctions.isWoWFlavor.WotLKC) or (LibFroznFunctions.isWoWFlavor.SL) then
 	LibFroznFunctions.hasWoWFlavor.optionsSliderTemplate = "OptionsSliderTemplate";
 end
 if (LibFroznFunctions.isWoWFlavor.ClassicEra) or (LibFroznFunctions.isWoWFlavor.BCC) or (LibFroznFunctions.isWoWFlavor.WotLKC) or (LibFroznFunctions.isWoWFlavor.CataC) or (LibFroznFunctions.isWoWFlavor.SL) then
@@ -597,6 +597,26 @@ end
 -- @param  spellIdentifier  spell id, name, name(subtext) or link
 -- @return subtext
 function LibFroznFunctions:GetSpellSubtext(spellIdentifier)
+	-- workaround for blizzard bug in classic era 1.15.4: GetSpellSubtext() causes an ACCESS_VIOLATION exception when the spell doesn't exist in the local cache, see https://github.com/Stanzilla/WoWUIBugs/issues/662
+	if (self.isWoWFlavor.ClassicEra) then
+		if (not spellIdentifier) then
+			return;
+		end
+		
+		local spell = Spell:CreateFromSpellID(spellIdentifier);
+		
+		if (spell:IsSpellEmpty()) then
+			return;
+		end
+		
+		-- spell data is already available
+		if (spell:IsSpellDataCached()) then
+			return C_Spell.GetSpellSubtext(spellIdentifier);
+		end
+		
+		return;
+	end
+	
 	-- since tww 11.0.0
 	if (C_Spell) and (C_Spell.GetSpellSubtext) then
 		if (not spellIdentifier) then
@@ -616,6 +636,13 @@ end
 -- @param  glyphID          optional. glyph id.
 -- @return spellLink
 function LibFroznFunctions:GetSpellLink(spellIdentifier, glyphID)
+	-- before bc 2.3.0
+	if (not LibFroznFunctions.hasWoWFlavor.realGetSpellLinkAvailable) then
+		local spellInfo = self:GetSpellInfo(spellIdentifier);
+		
+		return format("|c%s|Hspell:%d:0|h[%s]|h|r", "FF71D5FF", spellInfo and spellInfo.spellID, spellInfo and spellInfo.name);
+	end
+	
 	-- since tww 11.0.0
 	if (C_Spell) and (C_Spell.GetSpellLink) then
 		if (not spellIdentifier) then
@@ -626,12 +653,6 @@ function LibFroznFunctions:GetSpellLink(spellIdentifier, glyphID)
 	end
 	
 	-- before tww 11.0.0
-	if (not LibFroznFunctions.hasWoWFlavor.realGetSpellLinkAvailable) then
-		local spellInfo = self:GetSpellInfo(spellIdentifier);
-		
-		return format("|c%s|Hspell:%d:0|h[%s]|h|r", "FF71D5FF", spellInfo and spellInfo.spellID, spellInfo and spellInfo.name);
-	end
-	
 	return GetSpellLink(spellIdentifier);
 end
 
@@ -2556,15 +2577,24 @@ function LibFroznFunctions:FontExists(fontFile)
 		return false;
 	end
 	
-	-- create font
-	if (not fontExistsFont) then
-		fontExistsFont = CreateFont(LIB_NAME .. "-" .. LIB_MINOR .. "FontExists");
+	-- check if font file equals original test font file
+	local originalTestFontFile = "Fonts\\ARIALN.TTF";
+	
+	if (fontFile:lower() == originalTestFontFile:lower()) then
+		return true;
 	end
 	
-	-- check if font exists
+	-- create font and set with original test font file
+	if (not fontExistsFont) then
+		fontExistsFont = CreateFont(LIB_NAME .. "-" .. LIB_MINOR .. "_FontExists");
+	end
+	
+	fontExistsFont:SetFont(originalTestFontFile, 10, "");
+	
+	-- check if font changed aka exists
 	fontExistsFont:SetFont(fontFile, 10, "");
 	
-	return (not not fontExistsFont:GetFont());
+	return (fontExistsFont:GetFont() ~= originalTestFontFile);
 end
 
 ----------------------------------------------------------------------------------------------------
