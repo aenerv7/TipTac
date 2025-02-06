@@ -14,7 +14,7 @@
 # TipTac Reborn
 WoW AddOn TipTac Reborn [TWW] [CataC] [Classic Era]
 
-TipTac Reborn is a tooltip enchancement addon, it allows you to configure various aspects of the tooltip, such as moving where it's shown, the font, the scale of tips, plus a lot more. It's the successor of the original [TipTac by Aezay](https://www.curseforge.com/wow/addons/tip-tac) (abandoned since Nov 2020) with massive modifications since then.
+TipTac Reborn is a tooltip enhancement addon, it allows you to configure various aspects of the tooltip, such as moving where it's shown, the font, the scale of tips, plus a lot more. It's the successor of the original [TipTac by Aezay](https://www.curseforge.com/wow/addons/tip-tac) (abandoned since Nov 2020) with massive modifications since then.
 
 It's also available on [CurseForge](https://www.curseforge.com/wow/addons/tiptac-reborn).
 
@@ -22,7 +22,7 @@ It's also available on [CurseForge](https://www.curseforge.com/wow/addons/tiptac
 * added fixes for WoW patch ...
   * 11.0.7 - The War Within [TWW]
   * 4.4.1 - Cataclysm Classic [CataC]
-  * 1.15.5 - Classic Era / Vanilla [Classic Era]
+  * 1.15.6 - Classic Era / Vanilla [Classic Era]
 * added many enhancements
 
 ### The following problems are fixed respectively enhancements were added
