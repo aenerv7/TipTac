@@ -364,11 +364,11 @@ function ttStyle:GeneratePlayerLines(tip, currentDisplayParams, unitRecord, firs
 	-- name
 	local nameColor = (cfg.colorNameByClass and classColor) or unitRecord.nameColor;
 	local name = (cfg.nameType == "marysueprot" and unitRecord.rpName) or (cfg.nameType == "original" and unitRecord.originalName) or (cfg.nameType == "title" and unitRecord.nameWithTitle) or unitRecord.name;
-	if (unitRecord.serverName) and (unitRecord.serverName ~= "") and (cfg.showRealm ~= "none") then
+	if (unitRecord.normalizedForeignRealmName) and (cfg.showRealm ~= "none") then
 		if (cfg.showRealm == "show") then
-			name = name .. " - " .. unitRecord.serverName;
+			name = name .. " - " .. unitRecord.normalizedForeignRealmName;
 		elseif (cfg.showRealm == "showInNewLine") then
-			lineRealm:Push(nameColor:WrapTextInColorCode(unitRecord.serverName));
+			lineRealm:Push(nameColor:WrapTextInColorCode(unitRecord.normalizedForeignRealmName));
 		else
 			name = name .. " (*)";
 		end
@@ -385,8 +385,8 @@ function ttStyle:GeneratePlayerLines(tip, currentDisplayParams, unitRecord, firs
 	-- local guild, guildRank = GetGuildInfo(unitRecord.id);
 	local guildName, guildRankName, guildRankIndex, realm = GetGuildInfo(unitRecord.id);
 	if (guildName) then
-		local playerGuildName = GetGuildInfo("player");
-		local isPlayerGuild = (guildName == playerGuildName);
+		local playerGuildName, playerGuildRankName, playerGuildRankIndex, playerRealm = GetGuildInfo("player");
+		local isPlayerGuild = (guildName == playerGuildName) and (realm == playerRealm);
 		if (cfg.showGuild) then -- show guild
 			local guildColor = (isPlayerGuild and CreateColor(unpack(cfg.colorSameGuild)) or cfg.colorGuildByReaction and unitRecord.reactionColor or CreateColor(unpack(cfg.colorGuild)));
 			local text = guildColor:WrapTextInColorCode(format("<%s>", guildName));
@@ -421,24 +421,26 @@ function ttStyle:GeneratePlayerLines(tip, currentDisplayParams, unitRecord, firs
 		if (isPlayerGuild) and ((cfg.showGuildMemberNote) or (cfg.showGuildOfficerNote)) then
 			local playerGuildClubMemberInfo = LibFroznFunctions:GetPlayerGuildClubMemberInfo(unitRecord.guid);
 			
-			if (cfg.showGuildMemberNote) and (playerGuildClubMemberInfo.memberNote) then
-				if (lineInfo:GetCount() > 0) then
-					lineInfo:Push("\n");
+			if (playerGuildClubMemberInfo) then
+				if (cfg.showGuildMemberNote) and (playerGuildClubMemberInfo.memberNote) then
+					if (lineInfo:GetCount() > 0) then
+						lineInfo:Push("\n");
+					end
+					lineInfo:Push("|cffffd100");
+					lineInfo:Push(TT_PlayerGuildMemberNote);
+					lineInfo:Push(": ");
+					lineInfo:Push(TT_COLOR.text.default:WrapTextInColorCode(playerGuildClubMemberInfo.memberNote));
 				end
-				lineInfo:Push("|cffffd100");
-				lineInfo:Push(TT_PlayerGuildMemberNote);
-				lineInfo:Push(": ");
-				lineInfo:Push(TT_COLOR.text.default:WrapTextInColorCode(playerGuildClubMemberInfo.memberNote));
-			end
-			
-			if (cfg.showGuildOfficerNote) and (playerGuildClubMemberInfo.officerNote) then
-				if (lineInfo:GetCount() > 0) then
-					lineInfo:Push("\n");
+				
+				if (cfg.showGuildOfficerNote) and (playerGuildClubMemberInfo.officerNote) then
+					if (lineInfo:GetCount() > 0) then
+						lineInfo:Push("\n");
+					end
+					lineInfo:Push("|cffffd100");
+					lineInfo:Push(TT_PlayerGuildOfficerNote);
+					lineInfo:Push(": ");
+					lineInfo:Push(TT_COLOR.text.default:WrapTextInColorCode(playerGuildClubMemberInfo.officerNote));
 				end
-				lineInfo:Push("|cffffd100");
-				lineInfo:Push(TT_PlayerGuildOfficerNote);
-				lineInfo:Push(": ");
-				lineInfo:Push(TT_COLOR.text.default:WrapTextInColorCode(playerGuildClubMemberInfo.officerNote));
 			end
 		end
 	end

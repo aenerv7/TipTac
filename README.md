@@ -47,7 +47,7 @@ It's also available on [CurseForge](https://www.curseforge.com/wow/addons/tiptac
 - added class border color for member list in guild/community->chat and guild/community->guild roster, dungeon score tooltip and attendees in LFG list if config option "Colors->Color Tip Border by Class Color" is checked
 - changes regarding (added) config options under "ItemRef":
   - added border color for spells, unit auras, tradeskills, currencies (in chatframe), achievements, guild challenges (in guild/community->info) and pvp enlistment bonus (in pvp->quick match)
-  - added border color and infos for battle pet, battle pet abilities, (world/party) quests in worldmap/questlog/questtracker, questtracker of addon WorldQuestTracker, trade skill reagents (in TradeSkillUI), toys (in ToyBox), items, illusions and sets (in Wardrobe), sets (at Transmogrifier), currencies, achievements in guild/community->info->news, rewards in quest(log)/LFG-browser, azerite essences, runeforge power (in adventure journal), (enhanced) conduits, spells in macros on action bar, torghast anima powers, mini achievement shields in achievement buttons, items/illusions in dress up frame, flyouts (e.g. mage portals), pet actions, keystones (including RewardLevel, WeeklyRewardLevel, ItemID, TimeLimit and AffixInfos), instance locks
+  - added border color and infos for battle pet, battle pet abilities, (world/party) quests in worldmap/questlog/questtracker, questtracker of addon WorldQuestTracker, trade skill reagents (in TradeSkillUI), toys (in ToyBox), items, illusions and sets (in Wardrobe), sets (at Transmogrifier), currencies, achievements in guild/community->info->news, rewards in quest(log)/LFG-browser, azerite essences, runeforge power (in adventure journal), (enhanced) conduits, spells in macros on action bar, torghast anima powers, mini achievement shields in achievement buttons, items/illusions in dress up frame, flyouts (e.g. mage portals), pet actions, keystones (including RewardLevel, WeeklyRewardLevel, ItemID, TimeLimit and AffixDescriptions), instance locks
   - fixed "Smart Icon Appearance" for mounts and mount equipment (in mount journal), items (in adventure journal), spells and items (in guild/community->perks)
 - added scroll frame to config options. the scroll bar appears automatically, if content doesn't fit completely on the page.
 - applied transparency from standard backdrop and backdrop border to special backdrop and backdrop border
@@ -61,7 +61,7 @@ It's also available on [CurseForge](https://www.curseforge.com/wow/addons/tiptac
 - added showing of role and talent/specialization icon, coloring talents by class color, average item level, the de facto standard GearScore algorithm from addon TacoTip and TipTac's own implementation of GearScore to TipTacTalents. scanning/inspecting of units completely rewritten.
 - completely rewritten ttCore, ttBars, ttAuras, ttHyperlink and ttIcons. also applied necessary changes to ttStyle.
 - scanning/inspecting of talents and average item level completely rewritten
-- added option in "Anchors" to override GTT anchor for world/frame units/tips during challenge mode, during skyriding or in combat and (Guild & Community) ChatFrame
+- added option in "Anchors" to override anchor for world/frame units/tips during challenge mode, during skyriding or in combat and (Guild & Community, addon WIM) ChatFrame
 - added option "Backdrop->Enable Backdrop Modifications" to enable/disable all backdrop modifications
 - added option "Backdrop->BG Texture Layout" to set if the background texture should be repeated or stretched to fit the tip
 - added option "Hiding->Hide Tips Out Of Combat" and "Hiding->Hide Tips In Combat" to hide frame/world unit tips or unit/spell/item/action-bar/experience-bar tips during challenge mode, during skyriding or in/out of combat
@@ -70,12 +70,14 @@ It's also available on [CurseForge](https://www.curseforge.com/wow/addons/tiptac
 - added option "General->Show Current Unit Speed" to show current unit speed after race & class
 - added option "General->Show Player Guild Rank->Format Guild Rank" to also show player guild rank level in addition to guild rank title
 - added option "General->Show Mount" to show the player's mount icon/name/speed and an icon indicating if you already have collected the mount
+- added option "General->Show Player Guild Member/Officer note"
 - added option "Colors->Enable Coloring of Name" to enable/disable coloring of names
 - added option "Colors->Enable Coloring of Faction Text" to change the color of the unit's faction text
 - added option "ItemRef->Show Mount ID" to show the mount id
 - added option "ItemRef->Show Icon ID" to show the icon id
 - added option in "ItemRef" to show stack count of items in tooltip
 - added options "ItemRef->Show Expansion Icon/Name" to show the expansion icon/name of the item. This feature is only available in retail and not in WotLKC or classic era.
+- added option "ItemRef->Show Item Enchant ID/Description"
 - added refresh anchoring of shopping tooltips after re-anchoring of tip to prevent overlapping tooltips
 - considered debuff border for aura positions
 - splitted options for auras from spells

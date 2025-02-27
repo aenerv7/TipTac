@@ -240,7 +240,7 @@ tinsert(ttOptionsAnchors, { type = "DropDown", var = "anchorFrameTipPointInComba
 
 tinsert(ttOptionsAnchors, { type = "Header", label = "Other Anchor Overrides", tip = "Other special anchor overrides", enabled = function(factory) return factory:GetConfigValue("enableAnchor") end });
 
-tinsert(ttOptionsAnchors, { type = "Check", var = "enableAnchorOverrideCF", label = "(Guild & Community) ChatFrame", tip = "This option will override the anchor for (Guild & Community) ChatFrame", enabled = function(factory) return factory:GetConfigValue("enableAnchor") end });
+tinsert(ttOptionsAnchors, { type = "Check", var = "enableAnchorOverrideCF", label = "(Guild & Community) ChatFrame", tip = "This option will override the anchor for (Guild & Community, addon WIM) ChatFrame", enabled = function(factory) return factory:GetConfigValue("enableAnchor") end });
 tinsert(ttOptionsAnchors, { type = "DropDown", var = "anchorOverrideCFType", label = "Tip Type", list = DROPDOWN_ANCHORTYPE, enabled = function(factory) return factory:GetConfigValue("enableAnchor") and factory:GetConfigValue("enableAnchorOverrideCF") end });
 tinsert(ttOptionsAnchors, { type = "DropDown", var = "anchorOverrideCFPoint", label = "Tip Point", list = DROPDOWN_ANCHORPOS, enabled = function(factory) return factory:GetConfigValue("enableAnchor") and factory:GetConfigValue("enableAnchorOverrideCF") end });
 
@@ -625,9 +625,12 @@ if (TipTacItemRef) then
 		tinsert(ttifOptions, { type = "Check", var = "if_showExpansionName", label = "Show Expansion Name", tip = "For item tooltips, show their expansion name", enabled = function(factory) return factory:GetConfigValue("if_enable") end, x = 160 });
 	end
 	
+	tinsert(ttifOptions, { type = "Check", var = "if_showItemEnchantId", label = "Show Item Enchant ID", tip = "For item tooltips, show their enchantID", enabled = function(factory) return factory:GetConfigValue("if_enable") end });
+	tinsert(ttifOptions, { type = "Check", var = "if_showItemEnchantInfo", label = "Show Item Enchant Description", tip = "For item tooltips, show the enchant description", enabled = function(factory) return factory:GetConfigValue("if_enable") end });
+	
 	tinsert(ttifOptions, { type = "Check", var = "if_showKeystoneRewardLevel", label = "Show Keystone (Weekly) Reward Level", tip = "For keystone tooltips, show their rewardLevel and weeklyRewardLevel", enabled = function(factory) return factory:GetConfigValue("if_enable") end, y = 10 });
 	tinsert(ttifOptions, { type = "Check", var = "if_showKeystoneTimeLimit", label = "Show Keystone Time Limit", tip = "For keystone tooltips, show the instance timeLimit", enabled = function(factory) return factory:GetConfigValue("if_enable") end });
-	tinsert(ttifOptions, { type = "Check", var = "if_showKeystoneAffixInfo", label = "Show Keystone Affix Infos", tip = "For keystone tooltips, show the affix infos", enabled = function(factory) return factory:GetConfigValue("if_enable") end });
+	tinsert(ttifOptions, { type = "Check", var = "if_showKeystoneAffixInfo", label = "Show Keystone Affix Descriptions", tip = "For keystone tooltips, show the affix descriptions", enabled = function(factory) return factory:GetConfigValue("if_enable") end });
 	tinsert(ttifOptions, { type = "Check", var = "if_modifyKeystoneTips", label = "Modify Keystone Tooltips", tip = "Changes the keystone tooltips to show a bit more information\nWarning: Might conflict with other keystone addons", enabled = function(factory) return factory:GetConfigValue("if_enable") end });
 	
 	tinsert(ttifOptions, { type = "Check", var = "if_spellColoredBorder", label = "Show Spell Tips with Colored Border", tip = "When enabled and the tip is showing a spell, the tip border will have the standard spell color", enabled = function(factory) return factory:GetConfigValue("if_enable") end, y = 10 });
