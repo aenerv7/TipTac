@@ -156,6 +156,7 @@ function ttStyle:RemoveUnwantedLinesFromTip(tip, unitRecord)
 	
 	local hideCreatureTypeIfNoCreatureFamily = ((not unitRecord.isPlayer) or (unitRecord.isWildBattlePet)) and (not creatureFamily) and (creatureType);
 	local hideSpecializationAndClassText = (cfg.hideSpecializationAndClassText) and (unitRecord.isPlayer) and (LibFroznFunctions.hasWoWFlavor.specializationAndClassTextInPlayerUnitTip) and (unitRecord.className);
+	local hideRightClickForFrameSettingsText = (cfg.hideRightClickForFrameSettingsText) and (unitRecord.isPlayer) and (LibFroznFunctions.hasWoWFlavor.rightClickForFrameSettingsTextInPlayerUnitTip) and (UNIT_POPUP_RIGHT_CLICK);
 	
 	local specNames = LibFroznFunctions:CreatePushArray();
 	
@@ -173,13 +174,21 @@ function ttStyle:RemoveUnwantedLinesFromTip(tip, unitRecord)
 		local gttLine = _G["GameTooltipTextLeft" .. i];
 		local gttLineText = gttLine:GetText();
 		
-		if (type(gttLineText) == "string") and
-				(((gttLineText == FACTION_ALLIANCE) or (gttLineText == FACTION_HORDE) or (gttLineText == FACTION_NEUTRAL)) or
-				(cfg.hidePvpText) and (gttLineText == PVP_ENABLED) or
-				(hideCreatureTypeIfNoCreatureFamily) and (gttLineText == creatureType) or
-				(hideSpecializationAndClassText) and ((gttLineText == unitRecord.className) or (specNames:Contains(gttLineText:match("^(.+) " .. unitRecord.className .. "$"))))) then
+		if (type(gttLineText) == "string") then
+			local isGttLineTextUnitPopupRightClick = (hideRightClickForFrameSettingsText) and (gttLineText == UNIT_POPUP_RIGHT_CLICK);
 			
-			gttLine:SetText(nil);
+			if (isGttLineTextUnitPopupRightClick) or
+					((gttLineText == FACTION_ALLIANCE) or (gttLineText == FACTION_HORDE) or (gttLineText == FACTION_NEUTRAL)) or
+					(cfg.hidePvpText) and (gttLineText == PVP_ENABLED) or
+					(hideCreatureTypeIfNoCreatureFamily) and (gttLineText == creatureType) or
+					(hideSpecializationAndClassText) and ((gttLineText == unitRecord.className) or (specNames:Contains(gttLineText:match("^(.+) " .. unitRecord.className .. "$")))) then
+				
+				gttLine:SetText(nil);
+				
+				if (isGttLineTextUnitPopupRightClick) and (i > 1) then
+					_G["GameTooltipTextLeft" .. (i - 1)]:SetText(nil);
+				end
+			end
 		end
 	end
 end
@@ -469,16 +478,7 @@ function ttStyle:GeneratePetLines(tip, currentDisplayParams, unitRecord, first)
 		local race = UnitCreatureFamily(unitRecord.id) or UnitCreatureType(unitRecord.id) or TT_Unknown;
 		lineLevel:Push(" ");
 		lineLevel:Push(CreateColor(unpack(cfg.colorRace)):WrapTextInColorCode(race));
-	else
-		if (not currentDisplayParams.petLineLevelIndex) then
-			for i = 2, GameTooltip:NumLines() do
-				local gttLineText = _G["GameTooltipTextLeft"..i]:GetText();
-				if (type(gttLineText) == "string") and (gttLineText:find(TT_LevelMatchPet)) then
-					currentDisplayParams.petLineLevelIndex = i;
-					break;
-				end
-			end
-		end
+	else -- unitRecord.isBattlePetCompanion
 		lineLevel.Index = currentDisplayParams.petLineLevelIndex or 2;
 		local expectedLine = 3 + (unitRecord.isColorBlind and 1 or 0);
 		if (lineLevel.Index > expectedLine) then
@@ -798,16 +798,33 @@ function ttStyle:OnUnitTipStyle(TT_CacheForFrames, tip, currentDisplayParams, fi
 	local unitRecord = currentDisplayParams.unitRecord;
 	
 	if (first) then
+		-- get unit tooltip data because current unit tip may already have been manipulated (e.g. by addon "ElvUI")
+		local unitTooltipData = LibFroznFunctions:GetTooltipInfo("GetUnit", unitRecord.id)
+		
+		unitRecord.isColorBlind = (GetCVar("colorblindMode") == "1");
+		unitRecord.originalName = unitTooltipData.lines[1].leftText;
+		
 		-- find pet, battle pet or NPC title
 		if (unitRecord.isPet) or (unitRecord.isBattlePet) or (unitRecord.isNPC) then
-			unitRecord.petOrBattlePetOrNPCTitle = (unitRecord.isColorBlind and GameTooltipTextLeft3 or GameTooltipTextLeft2):GetText();
+			unitRecord.petOrBattlePetOrNPCTitle = (unitRecord.isColorBlind and unitTooltipData.lines[3] or unitTooltipData.lines[2]).leftText;
 			if (unitRecord.petOrBattlePetOrNPCTitle) and (unitRecord.petOrBattlePetOrNPCTitle:find(TT_LevelMatch)) then
 				unitRecord.petOrBattlePetOrNPCTitle = nil;
 			end
+		
+		-- find battle pet companion level line
+		elseif (unitRecord.isBattlePetCompanion) then
+			for i = 2, min(#unitTooltipData.lines, 4) do
+				local gttLineText = unitTooltipData.lines[i].leftText;
+				if (type(gttLineText) == "string") and (gttLineText:find(TT_LevelMatchPet)) then
+					currentDisplayParams.petLineLevelIndex = i;
+					break;
+				end
+			end
 		end
+
 		-- remember reaction in color blind mode if there is no separate line for guild name
 		if (not LibFroznFunctions.hasWoWFlavor.guildNameInPlayerUnitTip) and (unitRecord.isColorBlind) then
-			unitRecord.reactionTextInColorBlindMode = GameTooltipTextLeft2:GetText();
+			unitRecord.reactionTextInColorBlindMode = unitTooltipData.lines[2].leftText;
 		end
 	end
 
