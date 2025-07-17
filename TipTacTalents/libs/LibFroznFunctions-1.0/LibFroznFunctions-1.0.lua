@@ -9,7 +9,7 @@
 
 -- create new library
 local LIB_NAME = "LibFroznFunctions-1.0";
-local LIB_MINOR = 43; -- bump on changes
+local LIB_MINOR = 47; -- bump on changes
 
 if (not LibStub) then
 	error(LIB_NAME .. " requires LibStub.");
@@ -60,6 +60,7 @@ end
 --         .BCC        = true/false for BCC
 --         .WotLKC     = true/false for WotLKC
 --         .CataC      = true/false for CataC
+--         .MoPC       = true/false for MoPC
 --         .SL         = true/false for SL
 --         .DF         = true/false for DF
 --         .TWW        = true/false for TWW
@@ -68,6 +69,7 @@ LibFroznFunctions.isWoWFlavor = {
 	BCC = false,
 	WotLKC = false,
 	CataC = false,
+	MoPC = false,
 	SL = false,
 	DF = false,
 	TWW = false
@@ -81,6 +83,8 @@ elseif (_G["WOW_PROJECT_ID"] == _G["WOW_PROJECT_WRATH_CLASSIC"]) then
 	LibFroznFunctions.isWoWFlavor.WotLKC = true;
 elseif (_G["WOW_PROJECT_ID"] == _G["WOW_PROJECT_CATACLYSM_CLASSIC"]) then
 	LibFroznFunctions.isWoWFlavor.CataC = true;
+elseif (_G["WOW_PROJECT_ID"] == _G["WOW_PROJECT_MISTS_CLASSIC"]) then
+	LibFroznFunctions.isWoWFlavor.MoPC = true;
 else -- retail
 	if (_G["LE_EXPANSION_LEVEL_CURRENT"] == _G["LE_EXPANSION_SHADOWLANDS"]) then
 		LibFroznFunctions.isWoWFlavor.SL = true;
@@ -101,18 +105,18 @@ LFF_GEAR_SCORE_ALGORITHM = {
 --
 -- @return .guildNameInPlayerUnitTip                                   = true/false if the guild name is included in the player unit tip (since bc)
 --         .specializationAndClassTextInPlayerUnitTip                  = true/false if a specialization and class text is included in the player unit tip (since df 10.1.5)
---         .rightClickForFrameSettingsTextInPlayerUnitTip              = true/false if a right-click for frame settings is included in the player unit tip (since tww 11.0.7)
---         .needsSuppressingErrorMessageAndSpeechWhenCallingCanInspect = true/false for suppressing error message and speech when calling CanInspect() (till wotlkc)
+--         .rightClickForFrameSettingsTextInUnitTip                    = true/false if a right-click for frame settings is included in the unit tip (since tww 11.0.7)
+--         .needsSuppressingErrorMessageAndSpeechWhenCallingCanInspect = true/false for suppressing error message and speech when calling CanInspect() (till mopc)
 --         .talentsAvailableForInspectedUnit                           = true/false if getting talents from other players is available (since bc 2.3.0)
 --         .numTalentTrees                                             = number of talent trees
 --         .talentIconAvailable                                        = true/false if talent icon is available (since bc)
---         .GetTalentTabInfoReturnValuesFromCataC                      = true/false if GetTalentTabInfo() return values from catac (since catac 4.4.0)
+--         .GetTalentTabInfoReturnValuesFromCataC                      = true/false if GetTalentTabInfo() return values from catac (only catac since catac 4.4.0)
 --         .roleIconAvailable                                          = true/false if role icon is available (since MoP 5.0.4)
 --         .specializationAvailable                                    = true/false if specialization is available (since MoP 5.0.4)
 --         .itemLevelOfFirstRaidTierSet                                = item level of first raid tier set. false if not defined (yet).
 --         .GameTooltipSetPaddingWithLeftAndTop                        = true/false if GameTooltip:SetPadding() has the optional left and top parameters (since BfA 8.2.0)
---         .GameTooltipFadeOutNotBeCalledForWorldFrameUnitTips         = true/false if GameTooltip:FadeOut() will not be called for worldframe unit tips (till wotlkc)
---         .barMarginAdjustment                                        = bar margin adjustment (till wotlkc)
+--         .GameTooltipFadeOutNotBeCalledForWorldFrameUnitTips         = true/false if GameTooltip:FadeOut() will not be called for worldframe unit tips (till mopc)
+--         .barMarginAdjustment                                        = bar margin adjustment (since bc till mopc)
 --         .experienceBarFrame                                         = frame of experience bar
 --         .experienceBarDockedToInterfaceBar                          = true/false if experience bar is docked to interface bar (till df 10.0.0)
 --         .realGetSpellLinkAvailable                                  = true/false if the real GetSpellLink() is available (since bc 2.3.0). in classic era this function only returns the spell name instead of a spell link.
@@ -124,7 +128,7 @@ LFF_GEAR_SCORE_ALGORITHM = {
 LibFroznFunctions.hasWoWFlavor = {
 	guildNameInPlayerUnitTip = true,
 	specializationAndClassTextInPlayerUnitTip = true,
-	rightClickForFrameSettingsTextInPlayerUnitTip = true,
+	rightClickForFrameSettingsTextInUnitTip = true,
 	needsSuppressingErrorMessageAndSpeechWhenCallingCanInspect = false,
 	talentsAvailableForInspectedUnit = true,
 	numTalentTrees = 2,
@@ -156,30 +160,34 @@ if (LibFroznFunctions.isWoWFlavor.ClassicEra) or (LibFroznFunctions.isWoWFlavor.
 	LibFroznFunctions.hasWoWFlavor.defaultGearScoreAlgorithm = LFF_GEAR_SCORE_ALGORITHM.TacoTip;
 end
 if (LibFroznFunctions.isWoWFlavor.ClassicEra) or (LibFroznFunctions.isWoWFlavor.BCC) or (LibFroznFunctions.isWoWFlavor.WotLKC) or (LibFroznFunctions.isWoWFlavor.CataC) then
-	LibFroznFunctions.hasWoWFlavor.needsSuppressingErrorMessageAndSpeechWhenCallingCanInspect = true;
 	LibFroznFunctions.hasWoWFlavor.numTalentTrees = 3;
 	LibFroznFunctions.hasWoWFlavor.roleIconAvailable = false;
 	LibFroznFunctions.hasWoWFlavor.specializationAvailable = false;
+end
+if (LibFroznFunctions.isWoWFlavor.ClassicEra) or (LibFroznFunctions.isWoWFlavor.BCC) or (LibFroznFunctions.isWoWFlavor.WotLKC) or (LibFroznFunctions.isWoWFlavor.CataC) or (LibFroznFunctions.isWoWFlavor.MoPC) then
+	LibFroznFunctions.hasWoWFlavor.needsSuppressingErrorMessageAndSpeechWhenCallingCanInspect = true;
 	LibFroznFunctions.hasWoWFlavor.GameTooltipSetPaddingWithLeftAndTop = false;
 	LibFroznFunctions.hasWoWFlavor.GameTooltipFadeOutNotBeCalledForWorldFrameUnitTips = true;
-	LibFroznFunctions.hasWoWFlavor.barMarginAdjustment = -2;
 	LibFroznFunctions.hasWoWFlavor.relatedExpansionForItemAvailable = false;
 end
 if (LibFroznFunctions.isWoWFlavor.BCC) or (LibFroznFunctions.isWoWFlavor.WotLKC) or (LibFroznFunctions.isWoWFlavor.SL) then
 	LibFroznFunctions.hasWoWFlavor.optionsSliderTemplate = "OptionsSliderTemplate";
 end
-if (LibFroznFunctions.isWoWFlavor.ClassicEra) or (LibFroznFunctions.isWoWFlavor.BCC) or (LibFroznFunctions.isWoWFlavor.WotLKC) or (LibFroznFunctions.isWoWFlavor.CataC) or (LibFroznFunctions.isWoWFlavor.SL) then
+if (LibFroznFunctions.isWoWFlavor.ClassicEra) or (LibFroznFunctions.isWoWFlavor.BCC) or (LibFroznFunctions.isWoWFlavor.WotLKC) or (LibFroznFunctions.isWoWFlavor.CataC) or (LibFroznFunctions.isWoWFlavor.MoPC) or (LibFroznFunctions.isWoWFlavor.SL) then
 	LibFroznFunctions.hasWoWFlavor.specializationAndClassTextInPlayerUnitTip = false;
 	LibFroznFunctions.hasWoWFlavor.experienceBarFrame = MainMenuExpBar;
 	LibFroznFunctions.hasWoWFlavor.experienceBarDockedToInterfaceBar = true;
 end
-if (LibFroznFunctions.isWoWFlavor.ClassicEra) or (LibFroznFunctions.isWoWFlavor.BCC) or (LibFroznFunctions.isWoWFlavor.WotLKC) or (LibFroznFunctions.isWoWFlavor.CataC) or (LibFroznFunctions.isWoWFlavor.SL) or (LibFroznFunctions.isWoWFlavor.DF) then
-	LibFroznFunctions.hasWoWFlavor.rightClickForFrameSettingsTextInPlayerUnitTip = false;
+if (LibFroznFunctions.isWoWFlavor.ClassicEra) or (LibFroznFunctions.isWoWFlavor.BCC) or (LibFroznFunctions.isWoWFlavor.WotLKC) or (LibFroznFunctions.isWoWFlavor.CataC) or (LibFroznFunctions.isWoWFlavor.MoPC) or (LibFroznFunctions.isWoWFlavor.SL) or (LibFroznFunctions.isWoWFlavor.DF) then
+	LibFroznFunctions.hasWoWFlavor.rightClickForFrameSettingsTextInUnitTip = false;
 end
 if (LibFroznFunctions.isWoWFlavor.CataC) then
 	LibFroznFunctions.hasWoWFlavor.GetTalentTabInfoReturnValuesFromCataC = true;
 end
-if (LibFroznFunctions.isWoWFlavor.SL) then
+if (LibFroznFunctions.isWoWFlavor.CataC) or (LibFroznFunctions.isWoWFlavor.MoPC) then
+	LibFroznFunctions.hasWoWFlavor.barMarginAdjustment = -1;
+end
+if (LibFroznFunctions.isWoWFlavor.MoPC) or (LibFroznFunctions.isWoWFlavor.SL) then
 	LibFroznFunctions.hasWoWFlavor.numTalentTrees = 0;
 end
 if (LibFroznFunctions.isWoWFlavor.DF) then
@@ -190,6 +198,7 @@ LibFroznFunctions.hasWoWFlavor.itemLevelOfFirstRaidTierSet =
 	LibFroznFunctions.isWoWFlavor.BCC        and 120 or -- Chestguard of Malorne (Druid, Tier 4)
 	LibFroznFunctions.isWoWFlavor.WotLKC     and 213 or -- Valorous Dreamwalker Robe (Druid, Tier 7)
 	LibFroznFunctions.isWoWFlavor.CataC      and 359 or -- Stormrider's Robes (Druid, Tier 11)
+	LibFroznFunctions.isWoWFlavor.MoPC       and 397 or -- Deep Earth Robes (Druid, Tier 13)
 	LibFroznFunctions.isWoWFlavor.DF         and 395 or -- Lost Landcaller's Robes (Druid, Tier 29)
 	LibFroznFunctions.isWoWFlavor.TWW        and 571;   -- Hide of the Greatlynx (Druid, Tier 32)
 
@@ -662,7 +671,7 @@ end
 -- @return spellLink
 function LibFroznFunctions:GetSpellLink(spellIdentifier, glyphID)
 	-- before bc 2.3.0
-	if (not LibFroznFunctions.hasWoWFlavor.realGetSpellLinkAvailable) then
+	if (not self.hasWoWFlavor.realGetSpellLinkAvailable) then
 		local spellInfo = self:GetSpellInfo(spellIdentifier);
 		
 		return format("|c%s|Hspell:%d:0|h[%s]|h|r", "FF71D5FF", spellInfo and spellInfo.spellID, spellInfo and spellInfo.name);
@@ -825,6 +834,40 @@ function LibFroznFunctions:GetQuestLogRewardCurrencyInfo(questID, currencyIndex,
 		totalRewardAmount = quantity,
 		questRewardContextFlags = nil
 	};
+end
+
+-- get specialization
+--
+-- @param  isInspect  optional. true if information for the inspected player should be returned
+-- @param  isPet      optional. true if information for the player's pet should be returned
+-- @param  specGroup  optional. index of a given specialization/talent/glyph group (1 for primary, 2 for secondary)
+-- @return currentSpec. returns nil if no specialization is currently learned.
+function LibFroznFunctions:GetSpecialization(isInspect, isPet, specGroup)
+	-- since mopc 5.5.0
+	if (C_SpecializationInfo) and (C_SpecializationInfo.GetSpecialization) then
+		return C_SpecializationInfo.GetSpecialization(isInspect, isPet, specGroup);
+	end
+	
+	-- before mopc 5.5.0
+	return GetSpecialization(isInspect, isPet, specGroup);
+end
+
+-- get specialization info
+--
+-- @param  specIndex      index of the specialization to query, ascending from 1 to GetNumSpecializations().
+-- @param  isInspect      optional. true if information for the inspected player should be returned. hint: does not actually seem to work. you need to use GetInspectSpecialization().
+-- @param  isPet          optional. true if information for the player's pet should be returned
+-- @param  inspectTarget  optional. unit id to request data for when inspecting, e.g. "player", "target" or "mouseover"
+-- @param  sex            optional. player's sex as returned by UnitSex()
+-- @return id, name, description, icon, role, primaryStat
+function LibFroznFunctions:GetSpecializationInfo(specIndex, isInspect, isPet, inspectTarget, sex)
+	-- since mopc 5.5.0
+	if (C_SpecializationInfo) and (C_SpecializationInfo.GetSpecializationInfo) then
+		return C_SpecializationInfo.GetSpecializationInfo(specIndex, isInspect, isPet, inspectTarget, sex);
+	end
+	
+	-- before mopc 5.5.0
+	return GetSpecializationInfo(specIndex, isInspect, isPet, inspectTarget, sex);
 end
 
 ----------------------------------------------------------------------------------------------------
@@ -1781,9 +1824,25 @@ end
 
 -- get item quality color
 --
--- @param  quality                     item quality, e.g. 0 (poor), 3 (rare), 4 (epic), see "Enum.ItemQuality"
+-- @param  quality                     item quality, e.g. 0 (poor), 3 (rare), 4 (epic), see "Enum.ItemQuality" or LFF_ITEM_QUALITY
 -- @param  alternateQualityIfNotFound  alternate quality if color for param "quality" doesn't exist
 -- @return ColorMixin  returns nil if quality for param "quality" and "alternateQualityIfNotFound" doesn't exist.
+LFF_ITEM_QUALITY = CopyTable(Enum.ItemQuality); -- see ItemQuality in "ItemQualitiesDocumentation.lua"
+
+if (LFF_ITEM_QUALITY.Standard) then
+	LFF_ITEM_QUALITY.Common = LFF_ITEM_QUALITY.Standard;
+	LFF_ITEM_QUALITY.Standard = nil;
+end
+if (LFF_ITEM_QUALITY.Good) then
+	LFF_ITEM_QUALITY.Uncommon = LFF_ITEM_QUALITY.Good;
+	LFF_ITEM_QUALITY.Good = nil;
+end
+
+if (LFF_ITEM_QUALITY.Superior) then
+	LFF_ITEM_QUALITY.Rare = LFF_ITEM_QUALITY.Superior;
+	LFF_ITEM_QUALITY.Superior = nil;
+end
+
 function LibFroznFunctions:GetItemQualityColor(quality, alternateQualityIfNotFound)
 	-- since tww 11.1.5
 	if (ColorManager) then
@@ -1876,15 +1935,21 @@ end
 -- @param  role  "DAMAGER", "TANK" or "HEALER"
 -- @return markup for role icon to use in text. returns nil for invalid roles.
 function LibFroznFunctions:CreateMarkupForRoleIcon(role)
+	local atlas
+	
 	if (role == "TANK") then
-		return CreateAtlasMarkup("roleicon-tiny-tank");
+		atlas = "UI-LFG-RoleIcon-Tank-Micro";
 	elseif (role == "DAMAGER") then
-		return CreateAtlasMarkup("roleicon-tiny-dps");
+		atlas = "UI-LFG-RoleIcon-DPS-Micro";
 	elseif (role == "HEALER") then
-		return CreateAtlasMarkup("roleicon-tiny-healer");
+		atlas = "UI-LFG-RoleIcon-Healer-Micro";
 	else
 		return;
 	end
+	
+	local atlasInfo = C_Texture.GetAtlasInfo(atlas);
+	
+	return CreateTextureMarkup("Interface\\LFGFrame\\UILFGPrompts", 2048, 2048, nil, nil, atlasInfo.leftTexCoord + (10 / 2048), atlasInfo.rightTexCoord - (15 / 2048), atlasInfo.topTexCoord + (10 / 2048), atlasInfo.bottomTexCoord - (15 / 2048));
 end
 
 -- create markup for class icon
@@ -2550,7 +2615,7 @@ function LibFroznFunctions:WorldFrameIsMouseMotionFocus()
 		end
 	else
 		-- make shure that the WorldFrame can receive mouse hover events
-		if (not WorldFrame:IsForbidden()) and (not WorldFrame:IsMouseMotionEnabled()) then
+		if (not WorldFrame:IsForbidden()) and ((not WorldFrame:IsProtected()) or (not InCombatLockdown())) and (not WorldFrame:IsMouseMotionEnabled()) then
 			WorldFrame:EnableMouseMotion(true);
 		end
 		
@@ -4130,17 +4195,17 @@ function LibFroznFunctions:GetTalents(unitID)
 	local talents = {};
 	local isSelf = UnitIsUnit(unitID, "player");
 	
-	if (GetSpecialization) then -- retail
+	if (self.hasWoWFlavor.specializationAvailable) then -- retail, since MoP 5.0.4
 		local specializationName, specializationIcon, role, _;
 		
 		if (isSelf) then -- player
-			local specIndex = GetSpecialization();
+			local specIndex = self:GetSpecialization();
 			
 			if (not specIndex) then
 				return LFF_TALENTS.none;
 			end
 			
-			_, specializationName, _, specializationIcon, role = GetSpecializationInfo(specIndex);
+			_, specializationName, _, specializationIcon, role = self:GetSpecializationInfo(specIndex);
 		else -- inspecting
 			local specializationID = GetInspectSpecialization(unitID);
 			
@@ -4161,7 +4226,7 @@ function LibFroznFunctions:GetTalents(unitID)
 		local pointsSpent = {};
 		
 		if (isSelf) and (C_SpecializationInfo.CanPlayerUseTalentSpecUI()) or (not isSelf) and (C_Traits.HasValidInspectData()) then
-			local configID = (isSelf) and (C_ClassTalents.GetActiveConfigID()) or (not isSelf) and (Constants.TraitConsts.INSPECT_TRAIT_CONFIG_ID);
+			local configID = (isSelf) and (C_ClassTalents) and (C_ClassTalents.GetActiveConfigID) and (C_ClassTalents.GetActiveConfigID()) or (not isSelf) and (Constants.TraitConsts.INSPECT_TRAIT_CONFIG_ID);
 			
 			if (configID) then
 				local configInfo = C_Traits.GetConfigInfo(configID);
@@ -4190,7 +4255,7 @@ function LibFroznFunctions:GetTalents(unitID)
 		if (#pointsSpent > 0) then
 			talents.pointsSpent = pointsSpent;
 		end
-	else -- classic
+	else -- classic era, before MoP 5.0.4
 		-- inspect functions will always use the active spec when not inspecting
 		local activeTalentGroup = GetActiveTalentGroup and GetActiveTalentGroup(not isSelf);
 		local numTalentTabs = GetNumTalentTabs(not isSelf);
@@ -4413,10 +4478,10 @@ function LFF_GetAverageItemLevelFromItemData(unitID, callbackForItemData, unitGU
 	local isMainHandOnly = (itemMainHand) and (not itemOffHand);
 	
 	-- to check if main or off hand are artifacts
-	local isMainHandArtifact = (itemMainHand) and (itemMainHand.quality == Enum.ItemQuality.Artifact);
+	local isMainHandArtifact = (itemMainHand) and (itemMainHand.quality == LFF_ITEM_QUALITY.Artifact);
 	local itemMainHandEffectiveILvl = (itemMainHand) and (itemMainHand.effectiveILvl);
 	
-	local isOffHandArtifact = (itemOffHand) and (itemOffHand.quality == Enum.ItemQuality.Artifact);
+	local isOffHandArtifact = (itemOffHand) and (itemOffHand.quality == LFF_ITEM_QUALITY.Artifact);
 	local itemOffHandEffectiveILvl = (itemOffHand) and (itemOffHand.effectiveILvl);
 	
 	-- calculate average item level and GearScore
@@ -4502,7 +4567,7 @@ function LFF_GetAverageItemLevelFromItemData(unitID, callbackForItemData, unitGU
 	end
 	
 	if (not totalQualityColor) then
-		totalQualityColor = LibFroznFunctions:GetItemQualityColor(Round(totalQuality / totalItemsForQuality), Enum.ItemQuality.Common);
+		totalQualityColor = LibFroznFunctions:GetItemQualityColor(Round(totalQuality / totalItemsForQuality), LFF_ITEM_QUALITY.Common);
 	end
 	
 	-- set GearScore and quality color

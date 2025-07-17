@@ -2132,6 +2132,8 @@ function tt:SetCurrentDisplayParams(tip, tipContent)
 	-- - e.g. if hovering over unit auras which will be hidden. there will be subsequent calls of GameTooltip:SetUnitAura() without a new GameTooltip:OnShow().
 	-- - e.g. if hovering over empty action bar buttons the GameTooltip:SetAction() will be called, but there's no tooltip. therefore no OnTooltipCleared() will
 	--	      be fired if leaving the button and the currentDisplayParams are still set. afterwards if moving to a world unit, we need firing the group event.
+	local currentTime = GetTime();
+	
 	if ((currentDisplayParams.isSet) or (currentDisplayParams.isSetTemporarily)) and (currentDisplayParams.isSetTimestamp ~= currentTime) then
 		self:ResetCurrentDisplayParams(tip, true); -- necessary to fire no group events here, e.g because "currentDisplayParams.defaultAnchored" will be lost.
 	end
@@ -2665,8 +2667,8 @@ function tt:SetBackdropAndBackdropBorderColorToTip(tip)
 	
 	local tipParams = frameParams.config;
 	
-	-- set backdrop to tip not possible
-	if (not cfg.enableBackdrop) or (not tipParams.applyAppearance) then
+	-- set backdrop and backdrop border color to tip not possible
+	if (not tipParams.applyAppearance) then
 		return;
 	end
 	
@@ -3075,6 +3077,20 @@ function tt:SetBackdropLocked(tip, backdropInfo)
 	
 	isSettingBackdropLocked = false;
 	
+	-- get tip parameters
+	local frameParams = TT_CacheForFrames[tip];
+	
+	if (not frameParams) then
+		return;
+	end
+	
+	local tipParams = frameParams.config;
+	
+	-- set backdrop to tip not possible
+	if (not cfg.enableBackdrop) or (not tipParams.applyAppearance) then
+		return;
+	end
+	
 	-- set locked backdrop info
 	local frameParams = TT_CacheForFrames[tip];
 	
@@ -3116,6 +3132,20 @@ function tt:SetBackdropColorLocked(tip, r, g, b, a)
 	
 	isSettingBackdropColorLocked = false;
 	
+	-- get tip parameters
+	local frameParams = TT_CacheForFrames[tip];
+	
+	if (not frameParams) then
+		return;
+	end
+	
+	local tipParams = frameParams.config;
+	
+	-- set backdrop color to tip not possible
+	if (not tipParams.applyAppearance) then
+		return;
+	end
+	
 	-- set backdrop color locked
 	local frameParams = TT_CacheForFrames[tip];
 	
@@ -3149,6 +3179,20 @@ function tt:SetBackdropBorderColorLocked(tip, r, g, b, a)
 	end
 	
 	isSettingBackdropBorderColorLocked = false;
+	
+	-- get tip parameters
+	local frameParams = TT_CacheForFrames[tip];
+	
+	if (not frameParams) then
+		return;
+	end
+	
+	local tipParams = frameParams.config;
+	
+	-- set backdrop border color to tip not possible
+	if (not tipParams.applyAppearance) then
+		return;
+	end
 	
 	-- set backdrop border color locked
 	local frameParams = TT_CacheForFrames[tip];
@@ -3184,6 +3228,20 @@ function tt:SetCenterColorLocked(tip, r, g, b, a)
 	
 	isSettingCenterColorLocked = false;
 	
+	-- get tip parameters
+	local frameParams = TT_CacheForFrames[tip];
+	
+	if (not frameParams) then
+		return;
+	end
+	
+	local tipParams = frameParams.config;
+	
+	-- set center color to tip not possible
+	if (not tipParams.applyAppearance) then
+		return;
+	end
+	
 	-- set center color locked
 	local frameParams = TT_CacheForFrames[tip];
 	
@@ -3217,6 +3275,20 @@ function tt:SetBorderColorLocked(tip, r, g, b, a)
 	end
 	
 	isSettingBorderColorLocked = false;
+	
+	-- get tip parameters
+	local frameParams = TT_CacheForFrames[tip];
+	
+	if (not frameParams) then
+		return;
+	end
+	
+	local tipParams = frameParams.config;
+	
+	-- set border color to tip not possible
+	if (not tipParams.applyAppearance) then
+		return;
+	end
 	
 	-- set border color locked
 	local frameParams = TT_CacheForFrames[tip];
@@ -4304,80 +4376,95 @@ LibFroznFunctions:RegisterForGroupEvents(MOD_NAME, {
 LibFroznFunctions:RegisterForGroupEvents(MOD_NAME, {
 	OnConfigPreLoaded = function(self, TT_CacheForFrames, cfg, TT_ExtendedConfig)
 		-- consider upgrading TipTac_Config on version change (necessary if e.g. options are renamed or reused differently)
-		local versionTipTacWithConfigChanges;
+		local configChanges = {
+			-- changes in config with 24.08.05:
+			--
+			-- - renamed options with "Dragonriding" to "Skyriding":
+			--   enableAnchorOverrideWorldUnitDuringDragonriding -> enableAnchorOverrideWorldUnitDuringSkyriding
+			--   anchorWorldUnitTypeDuringDragonriding           -> anchorWorldUnitTypeDuringSkyriding
+			--   anchorWorldUnitPointDuringDragonriding          -> anchorWorldUnitPointDuringSkyriding
+			--   enableAnchorOverrideWorldTipDuringDragonriding  -> enableAnchorOverrideWorldTipDuringSkyriding
+			--   anchorWorldTipTypeDuringDragonriding            -> anchorWorldTipTypeDuringSkyriding
+			--   anchorWorldTipPointDuringDragonriding           -> anchorWorldTipPointDuringSkyriding
+			--   enableAnchorOverrideFrameUnitDuringDragonriding -> enableAnchorOverrideFrameUnitDuringSkyriding
+			--   anchorFrameUnitTypeDuringDragonriding           -> anchorFrameUnitTypeDuringSkyriding
+			--   anchorFrameUnitPointDuringDragonriding          -> anchorFrameUnitPointDuringSkyriding
+			--   enableAnchorOverrideFrameTipDuringDragonriding  -> enableAnchorOverrideFrameTipDuringSkyriding
+			--   anchorFrameTipTypeDuringDragonriding            -> anchorFrameTipTypeDuringSkyriding
+			--   anchorFrameTipPointDuringDragonriding           -> anchorFrameTipPointDuringSkyriding
+			--
+			--   hideTipsDuringDragonridingWorldUnits -> hideTipsDuringSkyridingWorldUnits
+			--   hideTipsDuringDragonridingFrameUnits -> hideTipsDuringSkyridingFrameUnits
+			--   hideTipsDuringDragonridingWorldTips  -> hideTipsDuringSkyridingWorldTips
+			--   hideTipsDuringDragonridingFrameTips  -> hideTipsDuringSkyridingFrameTips
+			--   hideTipsDuringDragonridingUnitTips   -> hideTipsDuringSkyridingUnitTips
+			--   hideTipsDuringDragonridingSpellTips  -> hideTipsDuringSkyridingSpellTips
+			--   hideTipsDuringDragonridingItemTips   -> hideTipsDuringSkyridingItemTips
+			--   hideTipsDuringDragonridingActionTips -> hideTipsDuringSkyridingActionTips
+			{
+				["24.08.05"] = function()
+					cfg.enableAnchorOverrideWorldUnitDuringSkyriding = cfg.enableAnchorOverrideWorldUnitDuringDragonriding;
+					cfg.enableAnchorOverrideWorldUnitDuringDragonriding = nil;
+					cfg.anchorWorldUnitTypeDuringSkyriding = cfg.anchorWorldUnitTypeDuringDragonriding;
+					cfg.anchorWorldUnitTypeDuringDragonriding = nil;
+					cfg.anchorWorldUnitPointDuringSkyriding = cfg.anchorWorldUnitPointDuringDragonriding;
+					cfg.anchorWorldUnitPointDuringDragonriding = nil;
+					cfg.enableAnchorOverrideWorldTipDuringSkyriding = cfg.enableAnchorOverrideWorldTipDuringDragonriding;
+					cfg.enableAnchorOverrideWorldTipDuringDragonriding = nil;
+					cfg.anchorWorldTipTypeDuringSkyriding = cfg.anchorWorldTipTypeDuringDragonriding;
+					cfg.anchorWorldTipTypeDuringDragonriding = nil;
+					cfg.anchorWorldTipPointDuringSkyriding = cfg.anchorWorldTipPointDuringDragonriding;
+					cfg.anchorWorldTipPointDuringDragonriding = nil;
+					cfg.enableAnchorOverrideFrameUnitDuringSkyriding = cfg.enableAnchorOverrideFrameUnitDuringDragonriding;
+					cfg.enableAnchorOverrideFrameUnitDuringDragonriding = nil;
+					cfg.anchorFrameUnitTypeDuringSkyriding = cfg.anchorFrameUnitTypeDuringDragonriding;
+					cfg.anchorFrameUnitTypeDuringDragonriding = nil;
+					cfg.anchorFrameUnitPointDuringSkyriding = cfg.anchorFrameUnitPointDuringDragonriding;
+					cfg.anchorFrameUnitPointDuringDragonriding = nil;
+					cfg.enableAnchorOverrideFrameTipDuringSkyriding = cfg.enableAnchorOverrideFrameTipDuringDragonriding;
+					cfg.enableAnchorOverrideFrameTipDuringDragonriding = nil;
+					cfg.anchorFrameTipTypeDuringSkyriding = cfg.anchorFrameTipTypeDuringDragonriding;
+					cfg.anchorFrameTipTypeDuringDragonriding = nil;
+					cfg.anchorFrameTipPointDuringSkyriding = cfg.anchorFrameTipPointDuringDragonriding;
+					cfg.anchorFrameTipPointDuringDragonriding = nil;
+					
+					cfg.hideTipsDuringSkyridingWorldUnits = cfg.hideTipsDuringDragonridingWorldUnits;
+					cfg.hideTipsDuringDragonridingWorldUnits = nil;
+					cfg.hideTipsDuringSkyridingFrameUnits = cfg.hideTipsDuringDragonridingFrameUnits;
+					cfg.hideTipsDuringDragonridingFrameUnits = nil;
+					cfg.hideTipsDuringSkyridingWorldTips = cfg.hideTipsDuringDragonridingWorldTips;
+					cfg.hideTipsDuringDragonridingWorldTips = nil;
+					cfg.hideTipsDuringSkyridingFrameTips = cfg.hideTipsDuringDragonridingFrameTips;
+					cfg.hideTipsDuringDragonridingFrameTips = nil;
+					cfg.hideTipsDuringSkyridingUnitTips = cfg.hideTipsDuringDragonridingUnitTips;
+					cfg.hideTipsDuringDragonridingUnitTips = nil;
+					cfg.hideTipsDuringSkyridingSpellTips = cfg.hideTipsDuringDragonridingSpellTips;
+					cfg.hideTipsDuringDragonridingSpellTips = nil;
+					cfg.hideTipsDuringSkyridingItemTips = cfg.hideTipsDuringDragonridingItemTips;
+					cfg.hideTipsDuringDragonridingItemTips = nil;
+					cfg.hideTipsDuringSkyridingActionTips = cfg.hideTipsDuringDragonridingActionTips;
+					cfg.hideTipsDuringDragonridingActionTips = nil;
+				end
+			},
+			-- changes in config with 25.07.07:
+			--
+			-- - set t_gearScoreAlgorithm to 2 after release of mopc (LFF_GEAR_SCORE_ALGORITHM.TipTac, TipTac's GearScore algorithm)
+			{
+				["25.07.07"] = function()
+					cfg.t_gearScoreAlgorithm = 2; -- LFF_GEAR_SCORE_ALGORITHM.TipTac, TipTac's GearScore algorithm
+				end
+			}
+		};
 		
-		-- changes in config with 24.08.05:
-		--
-		-- - renamed options with "Dragonriding" to "Skyriding":
-		--   enableAnchorOverrideWorldUnitDuringDragonriding -> enableAnchorOverrideWorldUnitDuringSkyriding
-		--   anchorWorldUnitTypeDuringDragonriding           -> anchorWorldUnitTypeDuringSkyriding
-		--   anchorWorldUnitPointDuringDragonriding          -> anchorWorldUnitPointDuringSkyriding
-		--   enableAnchorOverrideWorldTipDuringDragonriding  -> enableAnchorOverrideWorldTipDuringSkyriding
-		--   anchorWorldTipTypeDuringDragonriding            -> anchorWorldTipTypeDuringSkyriding
-		--   anchorWorldTipPointDuringDragonriding           -> anchorWorldTipPointDuringSkyriding
-		--   enableAnchorOverrideFrameUnitDuringDragonriding -> enableAnchorOverrideFrameUnitDuringSkyriding
-		--   anchorFrameUnitTypeDuringDragonriding           -> anchorFrameUnitTypeDuringSkyriding
-		--   anchorFrameUnitPointDuringDragonriding          -> anchorFrameUnitPointDuringSkyriding
-		--   enableAnchorOverrideFrameTipDuringDragonriding  -> enableAnchorOverrideFrameTipDuringSkyriding
-		--   anchorFrameTipTypeDuringDragonriding            -> anchorFrameTipTypeDuringSkyriding
-		--   anchorFrameTipPointDuringDragonriding           -> anchorFrameTipPointDuringSkyriding
-		--
-		--   hideTipsDuringDragonridingWorldUnits -> hideTipsDuringSkyridingWorldUnits
-		--   hideTipsDuringDragonridingFrameUnits -> hideTipsDuringSkyridingFrameUnits
-		--   hideTipsDuringDragonridingWorldTips  -> hideTipsDuringSkyridingWorldTips
-		--   hideTipsDuringDragonridingFrameTips  -> hideTipsDuringSkyridingFrameTips
-		--   hideTipsDuringDragonridingUnitTips   -> hideTipsDuringSkyridingUnitTips
-		--   hideTipsDuringDragonridingSpellTips  -> hideTipsDuringSkyridingSpellTips
-		--   hideTipsDuringDragonridingItemTips   -> hideTipsDuringSkyridingItemTips
-		--   hideTipsDuringDragonridingActionTips -> hideTipsDuringSkyridingActionTips
-		versionTipTacWithConfigChanges = "24.08.05";
-		
-		if (not cfg.version_TipTac_Config) or (cfg.version_TipTac_Config < versionTipTacWithConfigChanges) then
-			-- changes in config with 24.08.05
-			cfg.enableAnchorOverrideWorldUnitDuringSkyriding = cfg.enableAnchorOverrideWorldUnitDuringDragonriding;
-			cfg.enableAnchorOverrideWorldUnitDuringDragonriding = nil;
-			cfg.anchorWorldUnitTypeDuringSkyriding = cfg.anchorWorldUnitTypeDuringDragonriding;
-			cfg.anchorWorldUnitTypeDuringDragonriding = nil;
-			cfg.anchorWorldUnitPointDuringSkyriding = cfg.anchorWorldUnitPointDuringDragonriding;
-			cfg.anchorWorldUnitPointDuringDragonriding = nil;
-			cfg.enableAnchorOverrideWorldTipDuringSkyriding = cfg.enableAnchorOverrideWorldTipDuringDragonriding;
-			cfg.enableAnchorOverrideWorldTipDuringDragonriding = nil;
-			cfg.anchorWorldTipTypeDuringSkyriding = cfg.anchorWorldTipTypeDuringDragonriding;
-			cfg.anchorWorldTipTypeDuringDragonriding = nil;
-			cfg.anchorWorldTipPointDuringSkyriding = cfg.anchorWorldTipPointDuringDragonriding;
-			cfg.anchorWorldTipPointDuringDragonriding = nil;
-			cfg.enableAnchorOverrideFrameUnitDuringSkyriding = cfg.enableAnchorOverrideFrameUnitDuringDragonriding;
-			cfg.enableAnchorOverrideFrameUnitDuringDragonriding = nil;
-			cfg.anchorFrameUnitTypeDuringSkyriding = cfg.anchorFrameUnitTypeDuringDragonriding;
-			cfg.anchorFrameUnitTypeDuringDragonriding = nil;
-			cfg.anchorFrameUnitPointDuringSkyriding = cfg.anchorFrameUnitPointDuringDragonriding;
-			cfg.anchorFrameUnitPointDuringDragonriding = nil;
-			cfg.enableAnchorOverrideFrameTipDuringSkyriding = cfg.enableAnchorOverrideFrameTipDuringDragonriding;
-			cfg.enableAnchorOverrideFrameTipDuringDragonriding = nil;
-			cfg.anchorFrameTipTypeDuringSkyriding = cfg.anchorFrameTipTypeDuringDragonriding;
-			cfg.anchorFrameTipTypeDuringDragonriding = nil;
-			cfg.anchorFrameTipPointDuringSkyriding = cfg.anchorFrameTipPointDuringDragonriding;
-			cfg.anchorFrameTipPointDuringDragonriding = nil;
+		for _, configChange in ipairs(configChanges) do
+			local configChangeVersion, configChangeFn = next(configChange);
 			
-			cfg.hideTipsDuringSkyridingWorldUnits = cfg.hideTipsDuringDragonridingWorldUnits;
-			cfg.hideTipsDuringDragonridingWorldUnits = nil;
-			cfg.hideTipsDuringSkyridingFrameUnits = cfg.hideTipsDuringDragonridingFrameUnits;
-			cfg.hideTipsDuringDragonridingFrameUnits = nil;
-			cfg.hideTipsDuringSkyridingWorldTips = cfg.hideTipsDuringDragonridingWorldTips;
-			cfg.hideTipsDuringDragonridingWorldTips = nil;
-			cfg.hideTipsDuringSkyridingFrameTips = cfg.hideTipsDuringDragonridingFrameTips;
-			cfg.hideTipsDuringDragonridingFrameTips = nil;
-			cfg.hideTipsDuringSkyridingUnitTips = cfg.hideTipsDuringDragonridingUnitTips;
-			cfg.hideTipsDuringDragonridingUnitTips = nil;
-			cfg.hideTipsDuringSkyridingSpellTips = cfg.hideTipsDuringDragonridingSpellTips;
-			cfg.hideTipsDuringDragonridingSpellTips = nil;
-			cfg.hideTipsDuringSkyridingItemTips = cfg.hideTipsDuringDragonridingItemTips;
-			cfg.hideTipsDuringDragonridingItemTips = nil;
-			cfg.hideTipsDuringSkyridingActionTips = cfg.hideTipsDuringDragonridingActionTips;
-			cfg.hideTipsDuringDragonridingActionTips = nil;
-			
-			-- set version of TipTac_Config to version with config changes
-			cfg.version_TipTac_Config = versionTipTacWithConfigChanges;
+			if (not cfg.version_TipTac_Config) or (cfg.version_TipTac_Config < configChangeVersion) then
+				configChangeFn();
+				
+				-- set version of TipTac_Config to version with config changes
+				cfg.version_TipTac_Config = configChangeVersion;
+			end
 		end
 		
 		-- set version of TipTac_Config to current version

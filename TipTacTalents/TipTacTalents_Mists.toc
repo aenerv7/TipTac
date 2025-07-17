@@ -1,9 +1,9 @@
-## Interface: 40402
-## Version: 25.06.19
-## IconTexture: Interface\AddOns\TipTacItemRef\media\tiptac_logo
-## Title: TipTacItemRef
-## Author: Aezay (Earthen Ring EU), Frozn45
-## Notes: Improved ItemRefTooltip
+## Interface: 50500
+## Version: 25.07.15
+## IconTexture: Interface\AddOns\TipTacTalents\media\tiptac_logo
+## Title: TipTacTalents
+## Author: Frozn45, Aezay (Earthen Ring EU)
+## Notes: Adds Talent Spec and Average Item Level to Player Tooltips
 ## Category-enUS: User Interface
 ## Category-deDE: Benutzerinterface
 ## Category-esES: Interfaz de usuario
@@ -22,4 +22,4 @@
 ## X-Curse-Project-ID: 695153
 embeds.xml
 
-ttItemRef.lua
+ttTalents.lua

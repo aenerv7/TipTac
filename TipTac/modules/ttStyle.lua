@@ -156,7 +156,7 @@ function ttStyle:RemoveUnwantedLinesFromTip(tip, unitRecord)
 	
 	local hideCreatureTypeIfNoCreatureFamily = ((not unitRecord.isPlayer) or (unitRecord.isWildBattlePet)) and (not creatureFamily) and (creatureType);
 	local hideSpecializationAndClassText = (cfg.hideSpecializationAndClassText) and (unitRecord.isPlayer) and (LibFroznFunctions.hasWoWFlavor.specializationAndClassTextInPlayerUnitTip) and (unitRecord.className);
-	local hideRightClickForFrameSettingsText = (cfg.hideRightClickForFrameSettingsText) and (unitRecord.isPlayer) and (LibFroznFunctions.hasWoWFlavor.rightClickForFrameSettingsTextInPlayerUnitTip) and (UNIT_POPUP_RIGHT_CLICK);
+	local hideRightClickForFrameSettingsText = (cfg.hideRightClickForFrameSettingsText) and (LibFroznFunctions.hasWoWFlavor.rightClickForFrameSettingsTextInUnitTip) and (UNIT_POPUP_RIGHT_CLICK);
 	
 	local specNames = LibFroznFunctions:CreatePushArray();
 	
@@ -344,9 +344,9 @@ function ttStyle:HighlightTipTacDeveloper(tip, currentDisplayParams, unitRecord,
 	end
 	
 	-- add text to level
-	-- local tipTacDeveloperText = (CreateAtlasMarkup("UI-QuestPoiLegendary-QuestBang") .. " " .. TT_TipTacDeveloper .. " " .. CreateAtlasMarkup("UI-QuestPoiLegendary-QuestBang")); -- available in DF, but not available in WotLKC
-	local tipScale = tip:GetScale();
-	local tipTacDeveloperText = (CreateTextureMarkup("Interface\\AddOns\\" .. MOD_NAME .. "\\media\\QuestLegendaryMapIcons", 32, 32, 0, 0, 0.261719, 0.386719, 0.0078125, 0.257812, -2.5 * tipScale, 1.5 * tipScale) .. " " .. TT_TipTacDeveloper .. " " .. CreateTextureMarkup("Interface\\AddOns\\" .. MOD_NAME .. "\\media\\QuestLegendaryMapIcons", 32, 32, 0, 0, 0.261719, 0.386719, 0.0078125, 0.257812, -1 * tipScale, 1.5 * tipScale));
+	-- local tipTacDeveloperIcon = CreateAtlasMarkup("UI-QuestPoiLegendary-QuestBang"); -- available in DF, but not available in WotLKC
+	local tipTacDeveloperIcon = CreateTextureMarkup("Interface\\AddOns\\" .. MOD_NAME .. "\\media\\QuestLegendaryMapIcons", 256, 128, nil, nil, 0.26953125, 0.37890625, 0.0390625, 0.2421875);
+	local tipTacDeveloperText = (tipTacDeveloperIcon .. " " .. TT_TipTacDeveloper .. " " .. tipTacDeveloperIcon);
 	local modNameText = TT_COLOR.text.tipTacDeveloperTipTac:WrapTextInColorCode(MOD_NAME);
 	
 	lineLevel:Push(TT_COLOR.text.tipTacDeveloper:WrapTextInColorCode(tipTacDeveloperText:format(modNameText)));
@@ -802,12 +802,25 @@ function ttStyle:OnUnitTipStyle(TT_CacheForFrames, tip, currentDisplayParams, fi
 		local unitTooltipData = LibFroznFunctions:GetTooltipInfo("GetUnit", unitRecord.id)
 		
 		unitRecord.isColorBlind = (GetCVar("colorblindMode") == "1");
-		unitRecord.originalName = unitTooltipData.lines[1].leftText;
+		unitRecord.originalName = (unitTooltipData) and (unitTooltipData.lines[1]) and (unitTooltipData.lines[1].leftText);
 		
 		-- find pet, battle pet or NPC title
 		if (unitRecord.isPet) or (unitRecord.isBattlePet) or (unitRecord.isNPC) then
-			unitRecord.petOrBattlePetOrNPCTitle = (unitRecord.isColorBlind and unitTooltipData.lines[3] or unitTooltipData.lines[2]).leftText;
-			if (unitRecord.petOrBattlePetOrNPCTitle) and (unitRecord.petOrBattlePetOrNPCTitle:find(TT_LevelMatch)) then
+			unitRecord.petOrBattlePetOrNPCTitle = nil;
+			
+			if (unitTooltipData) then
+				if (unitRecord.isColorBlind) then
+					if (unitTooltipData.lines[3]) then
+						unitRecord.petOrBattlePetOrNPCTitle = unitTooltipData.lines[3].leftText;
+					end
+				else
+					if (unitTooltipData.lines[2]) then
+						unitRecord.petOrBattlePetOrNPCTitle = unitTooltipData.lines[2].leftText;
+					end
+				end
+			end
+			
+			if (type(unitRecord.petOrBattlePetOrNPCTitle) == "string") and (unitRecord.petOrBattlePetOrNPCTitle:find(TT_LevelMatch)) then
 				unitRecord.petOrBattlePetOrNPCTitle = nil;
 			end
 		
@@ -823,7 +836,7 @@ function ttStyle:OnUnitTipStyle(TT_CacheForFrames, tip, currentDisplayParams, fi
 		end
 
 		-- remember reaction in color blind mode if there is no separate line for guild name
-		if (not LibFroznFunctions.hasWoWFlavor.guildNameInPlayerUnitTip) and (unitRecord.isColorBlind) then
+		if (not LibFroznFunctions.hasWoWFlavor.guildNameInPlayerUnitTip) and (unitRecord.isColorBlind) and (unitTooltipData) and (unitTooltipData.lines[2]) then
 			unitRecord.reactionTextInColorBlindMode = unitTooltipData.lines[2].leftText;
 		end
 	end
