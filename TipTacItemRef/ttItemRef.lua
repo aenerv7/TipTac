@@ -1,3 +1,9 @@
+-- create addon
+local MOD_NAME = ...;
+local PARENT_MOD_NAME = "TipTac";
+local ttif = CreateFrame("Frame", MOD_NAME);
+
+-- upvalues
 local AceHook = LibStub:GetLibrary("AceHook-3.0");
 local format = string.format;
 local unpack = unpack;
@@ -14,10 +20,16 @@ local ejtt = EncounterJournalTooltip;
 -- get libs
 local LibFroznFunctions = LibStub:GetLibrary("LibFroznFunctions-1.0");
 
-local C_CurrencyInfo_GetCurrencyLink = C_CurrencyInfo.GetCurrencyLink;
-
-if (not C_CurrencyInfo_GetCurrencyLink) then
-	C_CurrencyInfo_GetCurrencyLink = GetCurrencyLink;
+local function C_CurrencyInfo_GetCurrencyLink(currencyID, currencyAmount)
+	local _currencyAmount = (currencyAmount or 0);
+	
+	-- since sl 9.0.1
+	if (C_CurrencyInfo) and (C_CurrencyInfo.GetCurrencyLink) then
+		return C_CurrencyInfo.GetCurrencyLink(currencyID, _currencyAmount);
+	end
+	
+	-- before sl 9.0.1
+	return GetCurrencyLink(currencyID, _currencyAmount);
 end
 
 local C_QuestLog_GetSelectedQuest = C_QuestLog.GetSelectedQuest;
@@ -29,11 +41,6 @@ if (not C_QuestLog_GetSelectedQuest) then
 		return questID;
 	end
 end
-
--- Addon
-local MOD_NAME = ...;
-local PARENT_MOD_NAME = "TipTac";
-local ttif = CreateFrame("Frame", MOD_NAME);
 
 -- Register with TipTac core addon if available
 local TipTac = _G[PARENT_MOD_NAME];
@@ -107,7 +114,9 @@ local TTIF_DefaultConfig = {
 	if_iconAnchor = "BOTTOMLEFT",
 	if_iconTooltipAnchor = "TOPLEFT",
 	if_iconOffsetX = 2.5,
-	if_iconOffsetY = -2.5
+	if_iconOffsetY = -2.5,
+	
+	if_hideClickForSettingsTextInCurrencyTip = true
 };
 local cfg;
 local TT_ExtendedConfig;
@@ -401,13 +410,9 @@ function ttif:VARIABLES_LOADED(event)
 		tipsToModify = TipTac.tipsToModify;
 	end
 
-	-- Use TipTac settings if installed
-	if (TipTac_Config) then
-		cfg = LibFroznFunctions:ChainTables(TipTac_Config, TTIF_DefaultConfig);
-	else
-		cfg = TTIF_DefaultConfig;
-	end
-
+	-- Use TipTac config if installed
+	cfg = select(2, LibFroznFunctions:CreateDbWithLibAceDB("TipTac_Config", TTIF_DefaultConfig));
+	
 	-- Hook Tips & Apply Settings
 	self:HookTips();
 	self:OnApplyConfig(TT_CacheForFrames, cfg, TT_ExtendedConfig);
@@ -638,9 +643,9 @@ function ttif:SetHyperlink_Hook(self, hyperlink)
 end
 
 -- HOOK: SetUnitAura + SetUnitBuff + SetUnitDebuff
-local function SetUnitAura_Hook(self, unit, index, filter)
+local function SetUnitAura_Hook(self, alternateFilterIfNotDefined, unit, index, filter)
 	if (cfg.if_enable) and (not tipDataAdded[self]) then
-		local auraData = LibFroznFunctions:GetAuraDataByIndex(unit, index, filter); -- [18.07.19] 8.0/BfA: "dropped second parameter"
+		local auraData = LibFroznFunctions:GetAuraDataByIndex(unit, index, filter or alternateFilterIfNotDefined); -- [18.07.19] 8.0/BfA: "dropped second parameter"
 		if (auraData) and (auraData.spellId) then
 			local link = LibFroznFunctions:GetSpellLink(auraData.spellId);
 			if (link) then
@@ -1580,6 +1585,36 @@ local function TDM_OnEnter_Hook(self)
 	end
 end
 
+-- HOOK: TokenEntryMixin:ShowCurrencyTooltip
+local function TEM_ShowCurrencyTooltip_Hook(self)
+	if (cfg.if_enable) and (gtt:IsShown()) then
+		-- Remove Unwanted Lines
+		local hideClickForSettingsTextInCurrencyTip = (cfg.if_hideClickForSettingsTextInCurrencyTip) and (LibFroznFunctions.hasWoWFlavor.clickForSettingsTextInCurrencyTip) and (CURRENCY_BUTTON_TOOLTIP_CLICK_INSTRUCTION);
+		
+		if (hideClickForSettingsTextInCurrencyTip) then
+			for i = 2, gtt:NumLines() do
+				local gttLine = _G["GameTooltipTextLeft" .. i];
+				local gttLineText = gttLine:GetText();
+				
+				if (type(gttLineText) == "string") then
+					local isGttLineTextCurrencyButtonTooltipClickInstruction = (hideClickForSettingsTextInCurrencyTip) and (gttLineText == CURRENCY_BUTTON_TOOLTIP_CLICK_INSTRUCTION);
+					
+					if (isGttLineTextCurrencyButtonTooltipClickInstruction) then
+						gttLine:SetText(nil);
+						
+						if (isGttLineTextCurrencyButtonTooltipClickInstruction) and (i > 1) then
+							_G["GameTooltipTextLeft" .. (i - 1)]:SetText(nil);
+						end
+						
+						gtt:Show();
+						break;
+					end
+				end
+			end
+		end
+	end
+end
+
 -- HOOK: PlayerChoicePowerChoiceTemplateMixin:OnEnter
 local function PCPCTM_OnEnter_Hook(self)
 	if (cfg.if_enable) and (not tipDataAdded[gtt]) and (gtt:IsShown()) then
@@ -1920,9 +1955,15 @@ function ttif:ApplyHooksToTips(tips, resolveGlobalNamedObjects, addToTipsToModif
 				hooksecurefunc(tip, "SetHyperlink", function(self, ...)
 					ttif:SetHyperlink_Hook(self, ...)
 				end);
-				hooksecurefunc(tip, "SetUnitAura", SetUnitAura_Hook);
-				hooksecurefunc(tip, "SetUnitBuff", SetUnitAura_Hook);
-				hooksecurefunc(tip, "SetUnitDebuff", SetUnitAura_Hook);
+				hooksecurefunc(tip, "SetUnitAura", function(self, ...)
+					SetUnitAura_Hook(self, nil, ...);
+				end);
+				hooksecurefunc(tip, "SetUnitBuff", function(self, ...)
+					SetUnitAura_Hook(self, LFF_AURA_FILTERS.Helpful, ...);
+				end);
+				hooksecurefunc(tip, "SetUnitDebuff", function(self, ...)
+					SetUnitAura_Hook(self, LFF_AURA_FILTERS.Harmful, ...);
+				end);
 				hooksecurefunc(tip, "SetAction", SetAction_Hook);
 				hooksecurefunc(tip, "SetSpellBookItem", SetSpellBookItem_Hook);
 				hooksecurefunc(tip, "SetPetAction", SetPetAction_Hook);
@@ -1975,6 +2016,8 @@ function ttif:ApplyHooksToTips(tips, resolveGlobalNamedObjects, addToTipsToModif
 					LibFroznFunctions:HookSecureFuncIfExists(DressUpOutfitDetailsSlotMixin, "OnEnter", DUODSM_OnEnter_Hook);
 					-- since df
 					LibFroznFunctions:HookSecureFuncIfExists(TalentDisplayMixin, "OnEnter", TDM_OnEnter_Hook);
+					-- since tww
+					LibFroznFunctions:HookSecureFuncIfExists(TokenEntryMixin, "ShowCurrencyTooltip", TEM_ShowCurrencyTooltip_Hook);
 				end
 				tipHooked = true;
 			else

@@ -69,6 +69,8 @@ local TT_COLOR = {
 		unitSpeed = CreateColor(0.8, 0.8, 0.8, 1), -- light+ grey (QUEST_OBJECTIVE_FONT_COLOR)
 		mountName = HIGHLIGHT_FONT_COLOR, -- white
 		mountSpeed = LIGHTYELLOW_FONT_COLOR,
+		mountSource = LIGHTYELLOW_FONT_COLOR,
+		mountLore = LIGHTYELLOW_FONT_COLOR,
 		tipTacDeveloper = RED_FONT_COLOR,
 		tipTacDeveloperTipTac = EPIC_PURPLE_COLOR
 	}
@@ -156,7 +158,7 @@ function ttStyle:RemoveUnwantedLinesFromTip(tip, unitRecord)
 	
 	local hideCreatureTypeIfNoCreatureFamily = ((not unitRecord.isPlayer) or (unitRecord.isWildBattlePet)) and (not creatureFamily) and (creatureType);
 	local hideSpecializationAndClassText = (cfg.hideSpecializationAndClassText) and (unitRecord.isPlayer) and (LibFroznFunctions.hasWoWFlavor.specializationAndClassTextInPlayerUnitTip) and (unitRecord.className);
-	local hideRightClickForFrameSettingsText = (cfg.hideRightClickForFrameSettingsText) and (LibFroznFunctions.hasWoWFlavor.rightClickForFrameSettingsTextInUnitTip) and (UNIT_POPUP_RIGHT_CLICK);
+	local hideRightClickForFrameSettingsTextInUnitTip = (cfg.hideRightClickForFrameSettingsTextInUnitTip) and (LibFroznFunctions.hasWoWFlavor.rightClickForFrameSettingsTextInUnitTip) and (UNIT_POPUP_RIGHT_CLICK);
 	
 	local specNames = LibFroznFunctions:CreatePushArray();
 	
@@ -175,7 +177,7 @@ function ttStyle:RemoveUnwantedLinesFromTip(tip, unitRecord)
 		local gttLineText = gttLine:GetText();
 		
 		if (type(gttLineText) == "string") then
-			local isGttLineTextUnitPopupRightClick = (hideRightClickForFrameSettingsText) and (gttLineText == UNIT_POPUP_RIGHT_CLICK);
+			local isGttLineTextUnitPopupRightClick = (hideRightClickForFrameSettingsTextInUnitTip) and (gttLineText == UNIT_POPUP_RIGHT_CLICK);
 			
 			if (isGttLineTextUnitPopupRightClick) or
 					((gttLineText == FACTION_ALLIANCE) or (gttLineText == FACTION_HORDE) or (gttLineText == FACTION_NEUTRAL)) or
@@ -609,6 +611,9 @@ function ttStyle:ModifyUnitTooltip(tip, currentDisplayParams, unitRecord, first)
 	end
 
 	-- Mount
+	local lineMount = LibFroznFunctions:CreatePushArray();
+	local lineMountLore = LibFroznFunctions:CreatePushArray();
+	
 	if (unitRecord.isPlayer) and (cfg.showMount) then
 		local unitID, filter = unitRecord.id, LFF_AURA_FILTERS.Helpful;
 		local index = 0;
@@ -622,14 +627,19 @@ function ttStyle:ModifyUnitTooltip(tip, currentDisplayParams, unitRecord, first)
 				local mountID = LibFroznFunctions:GetMountFromSpell(spellID);
 				
 				if (mountID) then
+					-- determine if mount has already been collected
 					local mountText = LibFroznFunctions:CreatePushArray();
 					local spacer;
+					local mountIsCollected;
 					local mountNameAdded = false;
+					local mountSourceAdded = false;
+					
+					if (cfg.showMountCollected) or (cfg.showMountSourceIfNotCollected) then
+						mountIsCollected = LibFroznFunctions:IsMountCollected(mountID);
+					end
 					
 					if (cfg.showMountCollected) then
-						local isCollected = LibFroznFunctions:IsMountCollected(mountID);
-						
-						if (isCollected) then
+						if (mountIsCollected) then
 							-- mountText:Push(CreateAtlasMarkup("common-icon-checkmark")); -- available in DF, but not available in WotLKC
 							mountText:Push(CreateTextureMarkup("Interface\\AddOns\\" .. MOD_NAME .. "\\media\\CommonIcons", 64, 64, 0, 0, 0.000488281, 0.125488, 0.504883, 0.754883));
 						else
@@ -638,10 +648,12 @@ function ttStyle:ModifyUnitTooltip(tip, currentDisplayParams, unitRecord, first)
 						end
 					end
 					
+					-- determine mount icon
 					if (cfg.showMountIcon) and (unitAuraInfo.icon) then
 						mountText:Push(CreateTextureMarkup(unitAuraInfo.icon, 64, 64, 0, 0, 0.07, 0.93, 0.07, 0.93));
 					end
 					
+					-- determine mount name
 					if (cfg.showMountText) and (unitAuraInfo.name) then
 						spacer = (mountText:GetCount() > 0) and " " or "";
 						
@@ -650,6 +662,7 @@ function ttStyle:ModifyUnitTooltip(tip, currentDisplayParams, unitRecord, first)
 						mountNameAdded = true;
 					end
 					
+					-- determine mount speed
 					if (cfg.showMountSpeed) then
 						spacer = (mountText:GetCount() > 0) and " " or "";
 						
@@ -676,13 +689,66 @@ function ttStyle:ModifyUnitTooltip(tip, currentDisplayParams, unitRecord, first)
 						end
 					end
 					
-					-- show mount text
-					if (mountText:GetCount() > 0) then
-						if (lineInfo:GetCount() > 0) then
-							lineInfo:Push("\n");
+					-- determine mount source and lore
+					if (cfg.showMountSourceIfNotCollected) or (cfg.showMountSource) or (cfg.showMountLore) then
+						local _, description, source = C_MountJournal.GetMountInfoExtraByID(mountID);
+						
+						spacer = string.rep(" ", 4);
+						
+						if (cfg.showMountSourceIfNotCollected) and (not mountIsCollected) or (cfg.showMountSource) then
+							local cleanedSource = "";
+							
+							if (type(source) == "string") then
+								cleanedSource = strtrim(source);
+								
+								if (cleanedSource ~= "") then
+									cleanedSource = LibFroznFunctions:RemovePatternFromEndOfTextMultipleTimes(cleanedSource, "|n");
+									cleanedSource = LibFroznFunctions:RemoveColorsFromText(cleanedSource);
+								end
+							end
+							
+							if (cleanedSource ~= "") then
+								if (mountText:GetCount() > 0) then
+									mountText:Push("\n");
+								end
+								
+								mountText:Push(spacer .. TT_COLOR.text.mountSource:WrapTextInColorCode(cleanedSource:gsub("|n", "|n" .. spacer)));
+								
+								mountSourceAdded = true;
+							end
 						end
 						
-						lineInfo:Push(TT_Mount:format(mountText:Concat()));
+						if (cfg.showMountLore) then
+							local cleanedDescription = "";
+							
+							if (type(description) == "string") then
+								cleanedDescription = strtrim(description);
+								
+								if (cleanedDescription ~= "") then
+									cleanedDescription = LibFroznFunctions:RemovePatternFromEndOfTextMultipleTimes(cleanedDescription, "|n");
+									cleanedDescription = LibFroznFunctions:RemoveColorsFromText(cleanedDescription);
+								end
+							end
+							
+							if (cleanedDescription ~= "") then
+								local mountLoreText = TT_COLOR.text.mountLore:WrapTextInColorCode(cleanedDescription:gsub("|n", "|n" .. spacer));
+								
+								if (mountText:GetCount() > 0) then
+									if (mountSourceAdded) then
+										lineMountLore:Push("\n" .. spacer .. mountLoreText);
+									else
+										lineMountLore:Push(spacer .. mountLoreText);
+									end
+								else
+									lineMountLore:Push(TT_Mount:format(mountLoreText));
+								end
+							end
+						end
+					end
+					
+					-- set mount text
+					if (mountText:GetCount() > 0) then
+						lineMount:Push(TT_Mount:format(mountText:Concat()));
 					end
 					
 					return true;
@@ -751,6 +817,38 @@ function ttStyle:ModifyUnitTooltip(tip, currentDisplayParams, unitRecord, first)
 		_G["GameTooltipTextLeft" .. currentDisplayParams.tipLineInfoIndex]:SetText(nil);
 	end
 	
+	-- Mount Line
+	if (lineMount:GetCount() > 0) then
+		local tipLineMountText = lineMount:Concat();
+		
+		if (currentDisplayParams.tipLineMountIndex) then
+			_G["GameTooltipTextLeft" .. currentDisplayParams.tipLineMountIndex]:SetText(tipLineMountText);
+		else
+			GameTooltip:AddLine(tipLineMountText);
+			currentDisplayParams.tipLineMountIndex = GameTooltip:NumLines();
+		end
+		
+		lineMount:Clear();
+	elseif (currentDisplayParams.tipLineMountIndex) then
+		_G["GameTooltipTextLeft" .. currentDisplayParams.tipLineMountIndex]:SetText(nil);
+	end
+	
+	-- Mount Lore Line
+	if (lineMountLore:GetCount() > 0) then
+		local tipLineMountLoreText = lineMountLore:Concat();
+		
+		if (currentDisplayParams.tipLineMountLoreIndex) then
+			_G["GameTooltipTextLeft" .. currentDisplayParams.tipLineMountLoreIndex]:SetText(tipLineMountLoreText);
+		else
+			GameTooltip:AddLine(tipLineMountLoreText, nil, nil, nil, true);
+			currentDisplayParams.tipLineMountLoreIndex = GameTooltip:NumLines();
+		end
+		
+		lineMountLore:Clear();
+	elseif (currentDisplayParams.tipLineMountLoreIndex) then
+		_G["GameTooltipTextLeft" .. currentDisplayParams.tipLineMountLoreIndex]:SetText(nil);
+	end
+	
 	-- Targeted By Line
 	if (lineTargetedBy:GetCount() > 0) then
 		local tipLineTargetedByText = format(TT_TargetedBy .. " (" .. TT_COLOR.text.default:WrapTextInColorCode(format("%d", lineTargetedBy:GetCount())) .. "): %s", TT_COLOR.text.default:WrapTextInColorCode(lineTargetedBy:Concat(", ")));
@@ -781,6 +879,8 @@ end
 function ttStyle:OnTipSetCurrentDisplayParams(TT_CacheForFrames, tip, currentDisplayParams, tipContent)
 	-- set current display params for unit appearance
 	currentDisplayParams.tipLineInfoIndex = nil;
+	currentDisplayParams.tipLineMountIndex = nil;
+	currentDisplayParams.tipLineMountLoreIndex = nil;
 	currentDisplayParams.tipLineTargetedByIndex = nil;
 	currentDisplayParams.petLineLevelIndex = nil;
 	currentDisplayParams.mergeLevelLineWithGuildName = nil;
@@ -855,6 +955,8 @@ function ttStyle:OnTipResetCurrentDisplayParams(TT_CacheForFrames, tip, currentD
 	
 	-- reset current display params for unit appearance
 	currentDisplayParams.tipLineInfoIndex = nil;
+	currentDisplayParams.tipLineMountIndex = nil;
+	currentDisplayParams.tipLineMountLoreIndex = nil;
 	currentDisplayParams.tipLineTargetedByIndex = nil;
 	currentDisplayParams.petLineLevelIndex = nil;
 	currentDisplayParams.mergeLevelLineWithGuildName = nil;

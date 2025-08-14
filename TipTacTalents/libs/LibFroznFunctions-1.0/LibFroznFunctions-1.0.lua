@@ -9,7 +9,7 @@
 
 -- create new library
 local LIB_NAME = "LibFroznFunctions-1.0";
-local LIB_MINOR = 47; -- bump on changes
+local LIB_MINOR = 49; -- bump on changes
 
 if (not LibStub) then
 	error(LIB_NAME .. " requires LibStub.");
@@ -106,11 +106,11 @@ LFF_GEAR_SCORE_ALGORITHM = {
 -- @return .guildNameInPlayerUnitTip                                   = true/false if the guild name is included in the player unit tip (since bc)
 --         .specializationAndClassTextInPlayerUnitTip                  = true/false if a specialization and class text is included in the player unit tip (since df 10.1.5)
 --         .rightClickForFrameSettingsTextInUnitTip                    = true/false if a right-click for frame settings is included in the unit tip (since tww 11.0.7)
+--         .clickForSettingsTextInCurrencyTip                          = true/false if a click for settings is included in the currency tip (since tww 11.0.0)
 --         .needsSuppressingErrorMessageAndSpeechWhenCallingCanInspect = true/false for suppressing error message and speech when calling CanInspect() (till mopc)
 --         .talentsAvailableForInspectedUnit                           = true/false if getting talents from other players is available (since bc 2.3.0)
 --         .numTalentTrees                                             = number of talent trees
 --         .talentIconAvailable                                        = true/false if talent icon is available (since bc)
---         .GetTalentTabInfoReturnValuesFromCataC                      = true/false if GetTalentTabInfo() return values from catac (only catac since catac 4.4.0)
 --         .roleIconAvailable                                          = true/false if role icon is available (since MoP 5.0.4)
 --         .specializationAvailable                                    = true/false if specialization is available (since MoP 5.0.4)
 --         .itemLevelOfFirstRaidTierSet                                = item level of first raid tier set. false if not defined (yet).
@@ -129,11 +129,11 @@ LibFroznFunctions.hasWoWFlavor = {
 	guildNameInPlayerUnitTip = true,
 	specializationAndClassTextInPlayerUnitTip = true,
 	rightClickForFrameSettingsTextInUnitTip = true,
+	clickForSettingsTextInCurrencyTip = true,
 	needsSuppressingErrorMessageAndSpeechWhenCallingCanInspect = false,
 	talentsAvailableForInspectedUnit = true,
 	numTalentTrees = 2,
 	talentIconAvailable = true,
-	GetTalentTabInfoReturnValuesFromCataC = false,
 	roleIconAvailable = true,
 	specializationAvailable = true,
 	itemLevelOfFirstRaidTierSet = false,
@@ -180,9 +180,7 @@ if (LibFroznFunctions.isWoWFlavor.ClassicEra) or (LibFroznFunctions.isWoWFlavor.
 end
 if (LibFroznFunctions.isWoWFlavor.ClassicEra) or (LibFroznFunctions.isWoWFlavor.BCC) or (LibFroznFunctions.isWoWFlavor.WotLKC) or (LibFroznFunctions.isWoWFlavor.CataC) or (LibFroznFunctions.isWoWFlavor.MoPC) or (LibFroznFunctions.isWoWFlavor.SL) or (LibFroznFunctions.isWoWFlavor.DF) then
 	LibFroznFunctions.hasWoWFlavor.rightClickForFrameSettingsTextInUnitTip = false;
-end
-if (LibFroznFunctions.isWoWFlavor.CataC) then
-	LibFroznFunctions.hasWoWFlavor.GetTalentTabInfoReturnValuesFromCataC = true;
+	LibFroznFunctions.hasWoWFlavor.clickForSettingsTextInCurrencyTip = false;
 end
 if (LibFroznFunctions.isWoWFlavor.CataC) or (LibFroznFunctions.isWoWFlavor.MoPC) then
 	LibFroznFunctions.hasWoWFlavor.barMarginAdjustment = -1;
@@ -910,6 +908,31 @@ function LibFroznFunctions:FormatText(text, replacements, ...)
 	return string.format(newText, ...);
 end
 
+-- remove pattern from end of text multiple times
+--
+-- @param  text     text to remove pattern from the end of multiple times
+-- @param  pattern  pattern to remove multiple times from end of text
+-- @return text with removed pattern from the end of multiple times
+function LibFroznFunctions:RemovePatternFromEndOfTextMultipleTimes(text, pattern)
+	local newText = tostring(text);
+	
+	newText = newText:gsub(pattern .. "$", "");
+	
+	if (newText == text) then
+		return newText;
+	end
+	
+	return self:RemovePatternFromEndOfTextMultipleTimes(newText, pattern);
+end
+
+-- remove colors from text
+--
+-- @param  text     text to remove colors from
+-- @return text with removed colors
+function LibFroznFunctions:RemoveColorsFromText(text)
+	return tostring(text):gsub("|c%x%x%x%x%x%x%x%x(.-)|r", "%1");
+end
+
 -- camel case text
 --
 -- @param  text  text to camel case, e.g. "warrior" or "WARRIOR"
@@ -1170,6 +1193,33 @@ local pushArray = {
 
 function LibFroznFunctions:CreatePushArray(optionalTable)
 	return setmetatable(optionalTable or {}, pushArray);
+end
+
+-- create linked table from table with key
+--
+-- @param  originalTable[]       original table
+-- @param  keyFromOriginalTable  key from original table
+-- @return table[]                 table linked to original table with key
+--         table.__GetLinkedTable  returns the key from the original table
+function LibFroznFunctions:CreateLinkedTableFromTableWithKey(originalTable, keyFromOriginalTable)
+	local linkedTableMeta = {
+		__index = function(tab, key, arg1)
+			if (key == "__GetLinkedTable") then
+				return originalTable[keyFromOriginalTable];
+			end
+			
+			return originalTable[keyFromOriginalTable][key];
+		end,
+		__newindex = function(tab, key, value)
+			originalTable[keyFromOriginalTable][key] = value;
+		end,
+		__call = function(tab, ...)
+		print("drin");
+			return originalTable(...);
+		end
+	};
+	
+	return setmetatable({}, linkedTableMeta);
 end
 
 -- check if item exists in table
@@ -1702,6 +1752,126 @@ function LibFroznFunctions:IsAddOnFinishedLoading(indexOrName)
 	local loaded, finished = C_AddOns.IsAddOnLoaded(indexOrName)
 	
 	return loaded and finished;
+end
+
+-- create database with lib AceDB-3.0
+--
+-- @param  tblNameOrObject  name of variable, or table to use for the database.
+-- @param  defaultConfig    optional. default config
+-- @return database
+local LibAceDB;
+
+function LibFroznFunctions:CreateDbWithLibAceDB(tblNameOrObject, defaultConfig)
+	-- get lib AceDB-3.0
+	if (not LibAceDB) then
+		LibAceDB = LibStub:GetLibrary("AceDB-3.0");
+	end
+	
+	-- get table the database should use
+	local tbl;
+	
+	if (type(tblNameOrObject) == "string") then
+		-- lookup the global object for this table name
+		tbl = self:GetValueFromObjectByPath(_G, tblNameOrObject);
+	else
+		tbl = tblNameOrObject;
+	end
+	
+	-- consider, that the original config before using lib AceDB-3.0 needs to be taken over.
+	local orgConfig;
+	
+	if (type(tbl) == "table") and (not tbl.profiles) then
+		orgConfig = tbl;
+	end
+	
+	-- create new database. consider that the database can already be registered in lib AceDB-3.0.
+	local db = self:GetDbFromLibAceDB(tblNameOrObject);
+	
+	if (db) then
+		-- database is already registered in lib AceDB-3.0. register additional defaults if necessary.
+		if (defaultConfig) then
+			local newDefaults = db.defaults.profile;
+			
+			MergeTable(newDefaults, defaultConfig);
+			db:RegisterDefaults({ profile = newDefaults });
+		end
+	else
+		-- database doesn't exists in lib AceDB-3.0 yet. create new database
+		db = LibAceDB:New(tblNameOrObject, (defaultConfig and { profile = defaultConfig } or nil), true);
+	end
+	
+	-- consider, that the original config before using lib AceDB-3.0 needs to be taken over.
+	if (orgConfig) then
+		local cfg = db.profile;
+		
+		MergeTable(cfg, orgConfig);
+	end
+	
+	return db, self:CreateLinkedTableFromTableWithKey(db, "profile");
+end
+
+-- get database from lib AceDB-3.0
+--
+-- @param  tblNameOrObject  name of variable, or table to use for the database.
+-- @return database  returns nil if the table is unknown or the database using the table doesn't exist.
+function LibFroznFunctions:GetDbFromLibAceDB(tblNameOrObject)
+	-- get lib AceDB-3.0
+	if (not LibAceDB) then
+		LibAceDB = LibStub:GetLibrary("AceDB-3.0");
+	end
+	
+	-- get table used by the database
+	local tbl;
+	
+	if (type(tblNameOrObject) == "string") then
+		-- lookup the global object for this table name
+		tbl = self:GetValueFromObjectByPath(_G, tblNameOrObject);
+	else
+		tbl = tblNameOrObject;
+	end
+	
+	if (type(tbl) ~= "table") then
+		return nil;
+	end
+	
+	-- find database object in db registry
+	for db in pairs(LibAceDB.db_registry) do
+		if (not db.parent) and (db.sv == tbl) then
+			return db;
+		end
+	end
+	
+	return nil;
+end
+
+-- get profiles from database from lib AceDB-3.0
+--
+-- @param  db  database to get profiles from
+-- @return profiles[]
+function LibFroznFunctions:GetProfilesFromDbFromLibAceDB(db, noCurrentProfile, noDefaultProfile)
+	-- build list of profiles to ignore
+	local profilesToIgnore = {};
+	
+	if (noCurrentProfile) then
+		local currentProfile = db:GetCurrentProfile();
+		
+		tinsert(profilesToIgnore, currentProfile);
+	end
+	
+	if (noDefaultProfile) then
+		tinsert(profilesToIgnore, "Default");
+	end
+	
+	-- get profiles from database from lib AceDB-3.0
+	local profiles = {};
+	
+	for _, name in ipairs(db:GetProfiles()) do
+		if (not self:ExistsInTable(name, profilesToIgnore)) then
+			tinsert(profiles, name);
+		end
+	end
+	
+	return profiles;
 end
 
 ----------------------------------------------------------------------------------------------------
@@ -2428,6 +2598,8 @@ end
 --          .cancelButtonText    cancel button text
 --          .onShowHandler       optional. handler for OnShow event of popup. parameters: self, data
 --          .onAcceptHandler     optional. handler for OnAccept event (button pressed) of popup. parameters: self, data
+local SPWT_GameDialogResizeHooked = {};
+
 function LibFroznFunctions:ShowPopupWithText(params)
 	-- no params
 	if (not params) then
@@ -2447,9 +2619,9 @@ function LibFroznFunctions:ShowPopupWithText(params)
 				return;
 			end
 			
-			local info = StaticPopupDialogs[which];
+			local dialogInfo = StaticPopupDialogs[which];
 			
-			if (not info) or (not info.hideOnEscape) then
+			if (not dialogInfo) or (not dialogInfo.hideOnEscape) then
 				return;
 			end
 			
@@ -2465,7 +2637,7 @@ function LibFroznFunctions:ShowPopupWithText(params)
 			end
 		end
 		
-		StaticPopupDialogs[popupName] = { -- hopefully no taint, see "StaticPopup.lua"
+		local definition = {
 			showAlertGear = 1,
 			hasEditBox = 1,
 			editBoxWidth = 400,
@@ -2474,21 +2646,46 @@ function LibFroznFunctions:ShowPopupWithText(params)
 				local which = self.which;
 				
 				if (which) then
-					local info = StaticPopupDialogs[which];
+					local dialogInfo = StaticPopupDialogs[which];
 					
-					if (info) and (info.editBoxWidth and info.editBoxWidth > 260) then
-						local width = self:GetWidth() + (info.editBoxWidth - 260);
-						
-						self:SetWidth(width);
-						self.maxWidthSoFar = width;
+					if (dialogInfo) and (dialogInfo.editBoxWidth and dialogInfo.editBoxWidth > 260) then
+						if (self.Resize) then -- GameDialogMixin:Resize() available since tww 11.2.0
+							if (not SPWT_GameDialogResizeHooked[self]) then -- see GameDialogMixin:Resize() in "GameDialog.lua"
+								hooksecurefunc(self, "Resize", function(self)
+									local dialogInfo = self.dialogInfo;
+									
+									if (not dialogInfo) then
+										return;
+									end
+									
+									local data = self.data;
+									
+									if (not data) or (not data.considerEditBoxWidth) then
+										return;
+									end
+									
+									self:SetMinimumWidth(self:GetMinimumWidth() + (dialogInfo.editBoxWidth - 260 - 19));
+									self:Layout();
+								end);
+								
+								SPWT_GameDialogResizeHooked[self] = true;
+							end
+							
+							data.considerEditBoxWidth = true;
+						else -- before tww 11.2.0
+							local width = self:GetWidth() + (dialogInfo.editBoxWidth - 260);
+							
+							self:SetWidth(width);
+							self.maxWidthSoFar = width;
+						end
 					end
 				end
 				
 				-- consider icon, locked edit box text and OnShow handler
-				local editBox = self.editBox;
+				local editBox = (self.GetEditBox and self:GetEditBox() or self.editBox); -- acccessor method GetEditBox() available since tww 11.2.0
 				
 				if (data) then
-					local alertIcon = _G[self:GetName() .. "AlertIcon"];
+					local alertIcon = (self.AlertIcon or _G[self:GetName() .. "AlertIcon"]);
 					
 					if (alertIcon) then
 						alertIcon:SetTexture(data.iconFile);
@@ -2535,20 +2732,32 @@ function LibFroznFunctions:ShowPopupWithText(params)
 				end
 			end,
 			OnCancel = function(self, data)
-				local editBox = self.editBox;
+				local editBox = (self.GetEditBox and self:GetEditBox() or self.editBox); -- acccessor method GetEditBox() available since tww 11.2.0;
 				
 				editBoxOnEscapePressed(editBox, data);
 			end,
 			hideOnEscape = 1
 		};
+		
+		if (StaticPopup_AddDefinition) then -- since tww 11.2.0
+			StaticPopup_AddDefinition(popupName, definition);
+		else -- before tww 11.2.0
+			StaticPopupDialogs[popupName] = definition; -- hopefully no taint, see "StaticPopup.lua"
+		end
 	end
 	
 	-- set popup config
 	local staticPopupDialog = StaticPopupDialogs[popupName];
 	
 	staticPopupDialog.text = params.prompt;
-	staticPopupDialog.button1 = params.acceptButtonText;
-	staticPopupDialog.button2 = params.cancelButtonText;
+	
+	if (StaticPopup_SetButtonText) then -- since tww 11.2.0
+		StaticPopup_SetButtonText(popupName, 1, params.acceptButtonText);
+		StaticPopup_SetButtonText(popupName, 2, params.cancelButtonText);
+	else -- before tww 11.2.0
+		staticPopupDialog.button1 = params.acceptButtonText;
+		staticPopupDialog.button2 = params.cancelButtonText;
+	end
 	
 	-- show popup with text
 	StaticPopup_Show(popupName, nil, nil, {
@@ -3894,7 +4103,7 @@ function frameForDelayedInspection:CreateUnitCacheRecord(unitID, unitGUID)
 	unitCacheRecord.timestampLastInspect = 0;
 	unitCacheRecord.callbacks = LibFroznFunctions:CreatePushArray();
 	
-	unitCacheRecord.talents = LibFroznFunctions:AreTalentsAvailable(unitID);
+	unitCacheRecord.talents = LibFroznFunctions:AreTalentsAvailable(unitID, unitCacheRecord.isSelf);
 	unitCacheRecord.averageItemLevel = LibFroznFunctions:IsAverageItemLevelAvailable(unitID);
 	
 	return unitCacheRecord;
@@ -4140,6 +4349,7 @@ end
 -- check if talents are available
 --
 -- @param  unitID  unit id for unit, e.g. "player", "target" or "mouseover"
+-- @param  isSelf  true if it's the player unit, false otherwise.
 -- @return returns "LFF_TALENTS.available" if talents are available.
 --         returns "LFF_TALENTS.na" if no talents are available.
 --         returns nil if unit id is missing or not a player
@@ -4149,7 +4359,7 @@ LFF_TALENTS = {
 	none = 3 -- no talents found
 };
 
-function LibFroznFunctions:AreTalentsAvailable(unitID)
+function LibFroznFunctions:AreTalentsAvailable(unitID, isSelf)
 	-- no unit id or not a player
 	local isValidUnitID = (unitID) and (UnitIsPlayer(unitID));
 	
@@ -4185,7 +4395,8 @@ end
 --         returns nil if unit id is missing or not a player
 function LibFroznFunctions:GetTalents(unitID)
 	-- check if talents are available
-	local areTalentsAvailable = self:AreTalentsAvailable(unitID);
+	local isSelf = UnitIsUnit(unitID, "player");
+	local areTalentsAvailable = self:AreTalentsAvailable(unitID, isSelf);
 	
 	if (areTalentsAvailable ~= LFF_TALENTS.available) then
 		return areTalentsAvailable;
@@ -4193,7 +4404,6 @@ function LibFroznFunctions:GetTalents(unitID)
 	
 	-- get talents
 	local talents = {};
-	local isSelf = UnitIsUnit(unitID, "player");
 	
 	if (self.hasWoWFlavor.specializationAvailable) then -- retail, since MoP 5.0.4
 		local specializationName, specializationIcon, role, _;
@@ -4269,13 +4479,7 @@ function LibFroznFunctions:GetTalents(unitID)
 		local maxPointsSpent;
 		
 		for tabIndex = 1, numTalentTabs do
-			local _talentTabName, _talentTabIcon, _pointsSpent;
-			
-			if (self.hasWoWFlavor.GetTalentTabInfoReturnValuesFromCataC) then
-				_, _talentTabName, _, _talentTabIcon, _pointsSpent = GetTalentTabInfo(tabIndex, not isSelf, nil, activeTalentGroup);
-			else
-				_talentTabName, _talentTabIcon, _pointsSpent = GetTalentTabInfo(tabIndex, not isSelf, nil, activeTalentGroup);
-			end
+			local _, _talentTabName, _, _talentTabIcon, _pointsSpent = GetTalentTabInfo(tabIndex, not isSelf, nil, activeTalentGroup);
 			
 			tinsert(pointsSpent, _pointsSpent);
 			
